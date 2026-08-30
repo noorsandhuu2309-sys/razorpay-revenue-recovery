@@ -1,0 +1,449 @@
+/* =========================================================================
+   GRAPH — CONTROLS, KEY, INSPECTORS
+   -------------------------------------------------------------------------
+   Split out of workspace.css because the graph grew its own instrument panel
+   and burying 250 lines of it in a 2,500-line stylesheet made both harder to
+   read. Everything here is scoped to classes the graph owns; the tokens are
+   workspace.css's, so the two cannot drift apart on colour.
+
+   The furniture follows one rule: it sits ABOVE the drawing and never competes
+   with it. Small type, hairline borders, no fill brighter than the surface,
+   nothing animated. The graph is the instrument; these are its dials.
+   ========================================================================= */
+
+/* Fullscreen promotes THE CANVAS, not the stage inside it.
+   -------------------------------------------------------------------------
+   The first attempt put `position: fixed; z-index: 60` on `.omx-graph-stage`
+   and it was stuck-in-place broken, for two compounding reasons:
+
+     * `.omx-canvas` is `z-index: 1` (from `.omx-shell > *`), which makes it a
+       stacking context. A z-index of 60 INSIDE it still resolves to "1" among
+       its siblings, so the inspector — a later sibling, also at 1 — painted
+       straight over the toolbar, including the button that leaves fullscreen.
+     * the background was `var(--omx-bg)`, which does not exist. The token is
+       `--omx-ground`. An undefined custom property is not a fallback to
+       anything; it is nothing, so the overlay was transparent and the rail
+       showed through while being unclickable underneath it.
+
+   Promoting the canvas element itself is the fix: it is the thing that has to
+   out-rank its siblings, so it is the thing that gets the z-index. The shell
+   stays mounted and keeps owning the selection and the keyboard. */
+body.omx-graph-fullscreen .omx-canvas {
+  position: fixed; inset: 0; z-index: 200;
+  background: var(--omx-ground);
+}
+/* The escape hatch, and it is deliberately the one piece of stage furniture
+   that cannot be covered: nothing else in this file goes above 7. */
+.omx-graph-exit {
+  position: absolute; z-index: 40;
+  top: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 10px 5px 12px;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-line-strong);
+  border-radius: var(--omx-r-lg);
+  box-shadow: var(--omx-shadow-2);
+}
+.omx-graph-exit kbd {
+  font-family: var(--omx-mono); font-size: 9.5px;
+  padding: 1px 5px; border-radius: 3px;
+  background: var(--omx-surface-2); color: var(--omx-text-dim);
+  border: 1px solid var(--omx-line-neutral);
+}
+/* -- the stage's vertical rhythm -----------------------------------------
+   Three rows of floating chrome across the top, declared ONCE as tokens so
+   they cannot drift into each other.
+
+   They used to be six separate `top:` values spread over two stylesheets, and
+   they had already collided: the toolbar sat at 52px under a 46px-tall tab bar
+   starting at 14px, so it overlapped the mode tabs by 8px and — being one
+   z-index higher — painted over the Clusters tab. The bar is also elastic (the
+   Layout and Expand groups appear and disappear with the mode and the
+   selection), so it is 586px wide in Network and 380px in Orbit: any fix that
+   relies on the two never meeting horizontally is a fix that works in one mode.
+
+   Hence rows, not columns. Row 2 begins below the tallest thing row 1 can
+   contain, so the bars cannot touch at any width, in any mode, in either
+   ground.
+
+     row 1  mode tabs (centre) · legend (left) · scale readout (right)
+     row 2  toolbar (right)
+     row 3  filter panel, hanging off the toolbar's filter button */
+.omx-graph-stage {
+  --omx-g-row1: 14px;
+  --omx-g-row2: 68px;
+  --omx-g-row3: 112px;
+}
+/* In fullscreen the exit chip owns the top-centre slot, so everything below it
+   shifts by one row. */
+.omx-graph-stage.fullscreen {
+  --omx-g-row1: 58px;
+  --omx-g-row2: 112px;
+  --omx-g-row3: 156px;
+}
+
+/* -- toolbar ------------------------------------------------------------- */
+/* Top-right, under the scale readout — NOT bottom-centre, which is where the
+   shell floats the action bar the moment anything is selected. Two floating
+   bars stacking on each other is what the old graph did with Fit and Reset,
+   and the toolbar is the one that must never be covered. */
+.omx-graph-toolbar {
+  position: absolute; z-index: 6;
+  right: 14px; top: var(--omx-g-row2, 68px);
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px; max-width: calc(100% - 28px);
+  overflow-x: auto; scrollbar-width: none;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-line);
+  border-radius: var(--omx-r-lg);
+  box-shadow: var(--omx-shadow-2);
+}
+.omx-graph-toolbar::-webkit-scrollbar { display: none; }
+
+/* Groups are separated by a hairline rather than by space, so the bar stays
+   compact while still saying which controls belong together. */
+.omx-graph-toolbar .grp {
+  display: flex; align-items: center; gap: 2px; flex: 0 0 auto;
+  padding-right: 4px; margin-right: 2px;
+  border-right: 1px solid var(--omx-line-neutral);
+}
+.omx-graph-toolbar .grp:last-child {
+  border-right: 0; padding-right: 0; margin-right: 0;
+}
+
+.omx-gbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; padding: 0;
+  border: 0; border-radius: 6px;
+  background: transparent; color: var(--omx-text-faint);
+  cursor: pointer;
+  transition: color var(--omx-fast) var(--omx-ease),
+              background var(--omx-fast) var(--omx-ease);
+}
+.omx-gbtn:hover:not(:disabled) {
+  background: var(--omx-surface-2); color: var(--omx-text);
+}
+.omx-gbtn:disabled { opacity: 0.35; cursor: default; }
+.omx-gbtn.on { background: var(--omx-gold-glow); color: var(--omx-gold-bright); }
+
+/* A non-interactive icon that names the group beside it. */
+.omx-gbtn.label { cursor: default; opacity: 0.7; }
+.omx-gbtn.label:hover { background: transparent; color: var(--omx-text-faint); }
+
+/* A filter button with filters actually applied carries a dot, so the state is
+   legible without opening the panel. */
+.omx-gbtn.live { position: relative; color: var(--omx-gold); }
+.omx-gbtn.live::after {
+  content: ''; position: absolute; top: 3px; right: 3px;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--omx-gold);
+}
+
+.omx-gseg {
+  padding: 4px 8px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--omx-text-faint);
+  font-family: var(--omx-mono); font-size: 10px; letter-spacing: 0.04em;
+  text-transform: uppercase; cursor: pointer; white-space: nowrap;
+  transition: color var(--omx-fast) var(--omx-ease),
+              background var(--omx-fast) var(--omx-ease);
+}
+.omx-gseg:hover { color: var(--omx-text); }
+.omx-gseg.on { background: var(--omx-gold-glow); color: var(--omx-gold-bright); }
+
+/* -- filter panel -------------------------------------------------------- */
+/* Hangs directly off the toolbar's filter button. */
+.omx-graph-filters {
+  position: absolute; z-index: 7;
+  right: 14px; top: var(--omx-g-row3, 112px); width: 262px;
+  max-height: min(70vh, 560px); overflow-y: auto;
+  padding: 12px 13px 14px;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-line-strong);
+  border-radius: var(--omx-r-lg);
+  box-shadow: var(--omx-shadow-2);
+}
+.omx-graph-filters .fhead {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+}
+.omx-graph-filters .fhead .hid { color: var(--omx-gold-dim); }
+.omx-graph-filters .fsec { margin-top: 12px; }
+.omx-graph-filters .fsec:first-of-type { margin-top: 0; }
+.omx-graph-filters .frow {
+  display: flex; align-items: center; gap: 7px;
+  padding: 4px 0; font-size: var(--omx-t-sm); color: var(--omx-text-dim);
+  cursor: pointer;
+}
+.omx-graph-filters .frow:hover { color: var(--omx-text); }
+.omx-graph-filters .frow input[type="checkbox"] {
+  width: 12px; height: 12px; accent-color: var(--omx-gold); flex: 0 0 auto;
+}
+
+/* The swatch repeats the canvas's SHAPE as well as its colour. Information
+   carried by colour alone fails for a reader who cannot separate the hues, and
+   this panel is where the vocabulary is taught. */
+.omx-graph-filters .sw { font-size: 10px; flex: 0 0 auto; line-height: 1; }
+.omx-graph-filters .sw.line {
+  width: 14px; height: 2px; border-radius: 1px; display: inline-block;
+}
+.omx-graph-filters .frow .l {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-graph-filters .frow .n {
+  margin-left: auto; font-size: 9.5px; color: var(--omx-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.omx-graph-filters .frange {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+}
+.omx-graph-filters .frange input[type="range"] {
+  flex: 1; accent-color: var(--omx-gold);
+}
+.omx-graph-filters .frange .v {
+  font-size: 10px; color: var(--omx-text-dim); min-width: 30px; text-align: right;
+}
+.omx-graph-filters .fchips {
+  display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px;
+}
+
+/* -- key ----------------------------------------------------------------- */
+/* Line style is the certainty channel and stays invisible unless it is spelled
+   out once. Three samples, drawn with the dash patterns the canvas uses. */
+.omx-graph-key {
+  display: flex; flex-direction: column; gap: 3px; margin-top: 9px;
+  padding-top: 8px; border-top: 1px solid var(--omx-line-neutral);
+}
+.omx-graph-key span {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 9.5px; color: var(--omx-text-faint);
+  font-family: var(--omx-mono); letter-spacing: 0.03em;
+}
+.omx-graph-key .k { width: 18px; height: 0; flex: 0 0 auto; }
+.omx-graph-key .k.solid { border-top: 1.5px solid var(--omx-text-faint); }
+.omx-graph-key .k.dashed { border-top: 1.5px dashed var(--omx-text-faint); }
+.omx-graph-key .k.dotted { border-top: 1.5px dotted var(--omx-text-faint); }
+
+/* -- the key's fold ------------------------------------------------------- */
+.omx-graph-legend .lhead {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 0; border: 0; background: none; cursor: pointer;
+}
+.omx-graph-legend .lhead .omx-label { cursor: pointer; }
+.omx-graph-legend .lhead .chev {
+  margin-left: auto; display: grid; place-items: center;
+  color: var(--omx-text-faint);
+  transform: rotate(90deg);
+  transition: transform var(--omx-base) var(--omx-ease);
+}
+.omx-graph-legend .lhead:hover .chev { color: var(--omx-text-dim); }
+.omx-graph-legend .lbody { margin-top: 8px; }
+.omx-graph-legend .lbody > .omx-label:first-child { display: block; }
+
+/* Folded — by the reader, at any width. */
+.omx-graph-legend.closed .lbody { display: none; }
+.omx-graph-legend.closed .lhead .chev { transform: rotate(0deg); }
+
+/* The link swatch in the legend. */
+.omx-graph-legend .ln {
+  width: 12px; height: 2px; border-radius: 1px; flex: 0 0 auto;
+}
+
+/* -- stage furniture ----------------------------------------------------- */
+.omx-graph-path,
+.omx-graph-note,
+.omx-graph-hover {
+  position: absolute; z-index: 5;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-line);
+  border-radius: var(--omx-r-lg);
+  box-shadow: var(--omx-shadow-2);
+}
+/* Bottom-left, below the hover readout. It was under the mode tabs and the
+   toolbar covered it — the toolbar is wide, and top-centre is not as free as
+   it looks once anything is selected. */
+.omx-graph-path {
+  left: 14px; bottom: 14px;
+  padding: 5px 8px; max-width: 300px;
+  display: flex; align-items: center; gap: 7px;
+}
+.omx-graph-path .pl {
+  font-size: var(--omx-t-xs); color: var(--omx-gold-bright);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* "Nothing connects these" — centred, because it is about the whole canvas,
+   and quiet, because it is an explanation rather than an alarm. */
+.omx-graph-note {
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  padding: 12px 16px; max-width: 340px; text-align: center;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.omx-graph-note strong { font-size: var(--omx-t-sm); color: var(--omx-text); }
+.omx-graph-note span {
+  font-size: var(--omx-t-xs); color: var(--omx-text-faint); line-height: 1.55;
+}
+
+/* The hover readout. Bottom-left and raised clear of the action bar, which the
+   shell floats over the canvas whenever anything is held. Pointer-transparent
+   so it can never eat the click it is describing. */
+.omx-graph-hover {
+  left: 14px; bottom: 92px; padding: 8px 11px; max-width: 290px;
+  pointer-events: none;
+}
+.omx-graph-hover .hh { display: flex; align-items: center; gap: 7px; }
+.omx-graph-hover .hh strong { font-size: 12.5px; color: var(--omx-text); }
+.omx-graph-hover .hh .g { font-family: var(--omx-mono); }
+.omx-graph-hover .hd {
+  margin-top: 5px; font-size: var(--omx-t-xs); line-height: 1.5;
+  color: var(--omx-text-faint);
+}
+
+/* Small chip: stage badges, activity scope tabs, the recency row. */
+.omx-chip.sm {
+  padding: 2px 7px; font-size: 9.5px; letter-spacing: 0.04em;
+  text-transform: uppercase; cursor: pointer;
+}
+
+/* -- relationship inspector ---------------------------------------------- */
+/* The relationship as a sentence: subject, direction, object. First in the
+   panel because it is the claim everything below is evidence for. */
+.omx-rel-claim {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 12px; padding: 9px 10px;
+  background: var(--omx-surface-2);
+  border: 1px solid var(--omx-line-neutral);
+  border-radius: 7px;
+}
+.omx-rel-claim .ep {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font-family: inherit; font-size: var(--omx-t-sm); color: var(--omx-text);
+  text-align: left;
+}
+.omx-rel-claim .ep:hover { color: var(--omx-gold-bright); }
+.omx-rel-claim .ep .g { font-family: var(--omx-mono); font-size: 11px; }
+.omx-rel-claim .arrow { color: var(--omx-gold); font-size: 13px; flex: 0 0 auto; }
+
+.omx-src-row {
+  display: block; padding: 7px 0; text-decoration: none; color: inherit;
+  border-bottom: 1px solid var(--omx-line-neutral);
+}
+.omx-src-row:last-child { border-bottom: 0; }
+.omx-src-row .t { font-size: var(--omx-t-sm); color: var(--omx-info); }
+.omx-src-row:hover .t { text-decoration: underline; }
+
+/* -- contextual activity -------------------------------------------------- */
+.omx-activity-scope {
+  font-size: var(--omx-t-xs); color: var(--omx-gold-bright);
+  max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-activity-tabs {
+  display: flex; gap: 5px; padding: 8px 16px;
+  border-bottom: 1px solid var(--omx-line-neutral);
+}
+
+/* The multi-selection banner in the object inspector. */
+.omx-section.multi { padding-bottom: 4px; }
+
+/* -- responsive ----------------------------------------------------------- */
+/* Measured against the STAGE, not the window — see the container declaration
+   in workspace.css for why the difference is up to 604px and why it mattered.
+
+   The old rule here also set `.omx-graph-legend { max-width: 168px }` below
+   1180px, which would now fight the legend's own width and put the ellipsis
+   back into the very labels the single-column layout exists to show. It is
+   gone: the legend does not get narrower, it gets out of the way. */
+
+/* Not enough room for the legend and the toolbar side by side. The legend drops
+   to row 3 and the two stop competing — reference material yields to controls,
+   and nothing has to be hidden or truncated to make it fit. */
+@container omxgraph (max-width: 880px) {
+  /* Qualified by the stage on purpose. A container query adds no specificity,
+     and the base rule lives in workspace.css, which Vite bundles AFTER this
+     file — so the unqualified selector tied on specificity and lost on source
+     order, leaving the legend exactly where it was. */
+  .omx-graph-stage .omx-graph-legend {
+    top: var(--omx-g-row3, 112px);
+    max-height: calc(100% - var(--omx-g-row3, 112px) - 14px);
+  }
+  /* And it folds. Moving it out of the toolbar's row stopped the two panels
+     colliding, but on a stage this size the drawing has grown into the space
+     the key used to float over harmlessly: expanded, it covered the whole left
+     third of the dial. A key that hides the thing it explains is worse than a
+     key you have to open. `:not(.open)` so an explicit choice still wins. */
+  .omx-graph-stage .omx-graph-legend:not(.open) .lbody { display: none; }
+  .omx-graph-stage .omx-graph-legend:not(.open) .lhead .chev {
+    transform: rotate(0deg);
+  }
+  /* The filter panel shares row 3 from the other side, so it is capped short of
+     the legend's column. */
+  .omx-graph-filters { max-width: calc(100% - 248px); }
+}
+
+/* Below this the segmented controls stop fitting beside the icon groups. The
+   labels shrink and the icons stay: losing "MEDIUM" is recoverable from a
+   tooltip, losing the zoom controls is not. */
+@container omxgraph (max-width: 700px) {
+  .omx-graph-toolbar { gap: 2px; padding: 3px; }
+  .omx-gseg { padding: 4px 6px; font-size: 9px; }
+  .omx-graph-hover { max-width: 230px; }
+}
+@container omxgraph (max-width: 560px) {
+  .omx-graph-filters { width: 232px; }
+}
+
+/* Orbit's honesty line: how much of the ring is actually being shown. Top-left
+   under the legend rather than over the dial, which is already crowded. */
+.omx-orbit-trim {
+  position: absolute; z-index: 5;
+  left: 50%; transform: translateX(-50%); bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 10px;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-line);
+  border-radius: var(--omx-r-lg);
+  box-shadow: var(--omx-shadow-2);
+}
+
+/* -- find panel ----------------------------------------------------------- */
+/* Shares row 3 with the filters, and the store closes one when the other
+   opens, so the two can never stack. */
+.omx-graph-find {
+  position: absolute; z-index: 7;
+  right: 14px; top: var(--omx-g-row3, 112px); width: 288px;
+  max-height: min(64vh, 460px); display: flex; flex-direction: column;
+  padding: 10px 11px 11px;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-line-strong);
+  border-radius: var(--omx-r-lg);
+  box-shadow: var(--omx-shadow-2);
+  animation: omx-pop var(--omx-fast) var(--omx-spring);
+}
+.omx-graph-find .fhead { display: flex; align-items: center; gap: 6px; }
+.omx-graph-find .fhead .omx-input { flex: 1; }
+.omx-graph-find .fcount { margin-top: 8px; }
+.omx-graph-find .flist {
+  margin-top: 6px; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.omx-graph-find .frow-hit {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 6px 7px; border: 1px solid transparent; border-radius: var(--omx-r);
+  background: none; color: var(--omx-text); cursor: pointer;
+  font-family: inherit; font-size: var(--omx-t-sm); text-align: left;
+  transition: background var(--omx-fast) var(--omx-ease),
+              border-color var(--omx-fast) var(--omx-ease);
+}
+.omx-graph-find .frow-hit:hover {
+  background: var(--omx-gold-glow); border-color: var(--omx-gold-dim);
+}
+.omx-graph-find .frow-hit .gl { font-family: var(--omx-mono); flex: 0 0 auto; }
+.omx-graph-find .frow-hit .nm {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-graph-find .frow-hit .ty { margin-left: auto; flex: 0 0 auto; }
+
+/* Compact input, for a panel rather than a form. */
+.omx-input.sm { padding: 5px 8px; font-size: var(--omx-t-sm); }
+
+@container omxgraph (max-width: 880px) {
+  .omx-graph-find { max-width: calc(100% - 248px); }
+}

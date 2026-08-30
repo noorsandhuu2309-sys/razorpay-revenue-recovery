@@ -1,0 +1,43 @@
+# OMNIX — core runtime.
+#
+# Everything needed to run the workspace and the research engine, and nothing
+# else. Optional extras live in their own files so a first install is small and
+# reliable: the voice stack used to pull faster-whisper, piper, sounddevice and
+# webrtcvad into every install, which is both the slowest and the most
+# failure-prone part of setup on Windows — for a feature most users never open.
+#
+#   pip install -r requirements.txt                  # the product
+#   pip install -r requirements-voice.txt            # + dictation / read-aloud
+
+fastapi
+uvicorn
+python-multipart
+httpx
+pydantic
+
+# Web search behind ORACLE's research runs.
+ddgs
+
+# Workspaces, artifacts, executions and the intelligence graph. Schema changes
+# go through Alembic; init_db() adopts a pre-Alembic database on first boot.
+# See WORKSPACE.md.
+sqlalchemy>=2.0
+alembic>=1.13
+
+# Local-model backend. Optional at runtime — OMNIX runs cloud-first and the
+# health probe reports Ollama's absence rather than failing — but the client is
+# small and keeping it here means offline mode works with no second install.
+ollama
+
+# Terminal output for the CLI.
+rich
+
+# Tests. Run with `./.venv/Scripts/python.exe -m pytest`; the suite points
+# itself at a temp SQLite file via OMNIX_DATABASE_URL and never touches
+# omnix_platform.db.
+pytest
+
+# Postgres. Optional: OMNIX runs on SQLite by default and only needs this when
+# OMNIX_DATABASE_URL points at Postgres — which is required for multi-tenancy,
+# because SQLite's single-writer lock serialises every concurrent run.
+psycopg[binary]>=3.2 ; python_version >= "3.9"

@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omnix"
+version = "0.6.0"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn"
+]
+
+[tool.setuptools]
+packages = ["api"]
+
+[tool.vercel]
+entrypoint = "api.index:app"

@@ -1,0 +1,562 @@
+/* The gate.
+ *
+ * Its own file, and every class prefixed `omx-gate-`, for the reason
+ * workspace.css's own header gives: that sheet is one ~3300-line global scope
+ * with no modules, so an obvious-sounding class name silently inherits another
+ * component's layout. `.omx-gate*` appears nowhere else in the codebase.
+ *
+ * It paints from the same `--omx-*` tokens as the app, so the login screen
+ * arrives in whichever of the ten theme/accent combinations the user last
+ * chose rather than snapping to gold-on-black and then swapping. index.html
+ * has already stamped `data-theme` and `data-accent` before this loads.
+ */
+
+/* Two panels: the card on the left, the field on the right. This is the shape
+   of the original pre-workspace lock screen, and it is the shape because a
+   centred card alone gives the eye nothing to rest on while it reads — the
+   right half is what makes it a lock screen rather than a form. Below 900px
+   the right half is dropped entirely and the card takes the width. */
+.omx-gate {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+  background: var(--omx-ground, #070707);
+  color: var(--omx-text, #e2dccc);
+  font-family: var(--omx-sans, 'Geist Variable', system-ui, sans-serif);
+}
+
+.omx-gate-left {
+  position: relative;
+  flex: 0 0 clamp(380px, 42%, 560px);
+  height: 100%;
+  /* Clips the glows. The scrolling happens one level in — see
+     `.omx-gate-scroll` — because a scroll container treats the glows' overhang
+     as content to scroll to. */
+  overflow: hidden;
+}
+
+.omx-gate-scroll {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 32px 24px;
+}
+
+/* Two slow radial glows in the accent. Pure CSS so a cold launch paints
+   instantly with the network unplugged — this is the first frame of the
+   product and it cannot wait on a canvas or a font. */
+.omx-gate-glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(18px);
+  animation: omx-gate-drift 12s ease-in-out infinite alternate;
+}
+
+.omx-gate-glow.a {
+  top: -14%; left: -10%; width: 460px; height: 460px;
+  background: radial-gradient(circle,
+    rgba(var(--omx-accent-rgb, 211, 173, 85), 0.16), transparent 65%);
+}
+
+.omx-gate-glow.b {
+  bottom: -18%; right: -6%; width: 400px; height: 400px;
+  background: radial-gradient(circle,
+    rgba(var(--omx-accent-rgb, 211, 173, 85), 0.10), transparent 65%);
+  animation-duration: 15s;
+  animation-delay: 2s;
+}
+
+@keyframes omx-gate-drift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to   { transform: translate3d(2%, 2%, 0) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omx-gate-glow { animation: none; }
+}
+
+.omx-gate-panel {
+  position: relative;
+  width: min(420px, 100%);
+  margin: auto 0;
+  flex: none;
+  padding: 30px 32px 24px;
+  border: 1px solid var(--omx-line, rgba(211, 173, 85, 0.18));
+  border-radius: 14px;
+  background: var(--omx-surface, rgba(16, 15, 13, 0.9));
+  backdrop-filter: blur(14px);
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.7),
+              0 2px 0 rgba(255, 255, 255, 0.02) inset;
+  animation: omx-gate-rise 500ms cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+
+@keyframes omx-gate-rise {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+.omx-gate-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 26px;
+}
+
+/* Same trick the rail uses: the PNG carries the Möbius mark in its alpha
+   channel, so it is applied as a mask and painted with the accent. One asset
+   reads correctly in all ten theme/accent combinations. */
+.omx-gate-brand .mark {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  background-color: var(--omx-accent, #d3ad55);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+.omx-gate-brand .bt {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--omx-text, #e8e2d2);
+}
+
+/* Mono and widely tracked in the accent — this label is the original screen's
+   signature and the thing that makes the card read as a console rather than a
+   web form. */
+.omx-gate-brand .bs {
+  font-family: var(--omx-mono, ui-monospace, monospace);
+  font-size: 9.5px;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: var(--omx-accent, #d3ad55);
+}
+
+.omx-gate-title {
+  margin: 0 0 6px;
+  font-size: 25px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.omx-gate-blurb {
+  margin: 0 0 22px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--omx-text-dim, #a49d8c);
+}
+
+.omx-gate-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.omx-gate-fieldrow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.omx-gate-fieldrow > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint, #8d8676);
+}
+
+.omx-gate-fieldrow input {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--omx-line, rgba(211, 173, 85, 0.2));
+  border-radius: 9px;
+  background: var(--omx-ground, rgba(0, 0, 0, 0.28));
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.omx-gate-fieldrow input:focus {
+  outline: none;
+  border-color: var(--omx-accent, #d3ad55);
+  box-shadow: 0 0 0 3px rgba(var(--omx-accent-rgb, 211, 173, 85), 0.16);
+}
+
+.omx-gate-fieldrow.bad input {
+  border-color: var(--omx-hue-neg, #d2604a);
+}
+
+.omx-gate-pw { position: relative; }
+
+.omx-gate-pw input { padding-right: 62px; }
+
+.omx-gate-eye {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--omx-text-faint, #8d8676);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.omx-gate-eye:hover { color: var(--omx-accent, #d3ad55); }
+
+.omx-gate-inline {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--omx-accent, #d3ad55);
+  font: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.omx-gate-inline:hover { text-decoration: underline; }
+
+/* Rules, not a strength bar. The meter can only check what it can see, and a
+   green "strong" badge makes a claim about entropy that nothing here measured. */
+.omx-gate-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.omx-gate-rules li {
+  padding: 3px 9px;
+  border: 1px solid var(--omx-line, rgba(211, 173, 85, 0.16));
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--omx-text-faint, #8d8676);
+  transition: color 160ms ease, border-color 160ms ease;
+}
+
+.omx-gate-rules li.ok {
+  border-color: rgba(var(--omx-accent-rgb, 211, 173, 85), 0.5);
+  color: var(--omx-accent, #d3ad55);
+}
+
+.omx-gate-rules li.ok::before { content: '✓ '; }
+
+.omx-gate-keep {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--omx-text-dim, #a49d8c);
+  cursor: pointer;
+}
+
+.omx-gate-keep input { accent-color: var(--omx-accent, #d3ad55); }
+
+.omx-gate-error {
+  padding: 9px 12px;
+  border: 1px solid rgba(210, 96, 74, 0.45);
+  border-radius: 8px;
+  background: rgba(210, 96, 74, 0.1);
+  color: var(--omx-hue-neg, #e08a72);
+  font-size: 12.5px;
+  animation: omx-gate-shake 260ms ease;
+}
+
+@keyframes omx-gate-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+.omx-gate-submit,
+.omx-gate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 11px 16px;
+  border: 1px solid var(--omx-accent, #d3ad55);
+  border-radius: 9px;
+  background: var(--omx-accent, #d3ad55);
+  color: var(--omx-accent-ink, #120e05);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 120ms ease, filter 140ms ease, opacity 140ms ease;
+}
+
+.omx-gate-submit:hover:not(:disabled),
+.omx-gate-btn:hover { filter: brightness(1.08); }
+
+.omx-gate-submit:active:not(:disabled),
+.omx-gate-btn:active { transform: scale(0.985); }
+
+.omx-gate-submit:disabled { opacity: 0.6; cursor: default; }
+
+.omx-gate-sent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.omx-gate-note {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--omx-line, rgba(211, 173, 85, 0.18));
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--omx-text-dim, #a49d8c);
+}
+
+.omx-gate-foot {
+  margin-top: 18px;
+  font-size: 12.5px;
+  color: var(--omx-text-dim, #a49d8c);
+  text-align: center;
+}
+
+.omx-gate-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--omx-accent, #d3ad55);
+  font: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.omx-gate-link:hover { text-decoration: underline; }
+
+.omx-gate-fine {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--omx-line, rgba(211, 173, 85, 0.12));
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--omx-text-faint, #7d7768);
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- demo mode */
+/* Small, and above the form rather than beside the button: someone who is
+   about to type a password should learn it will not be checked *before* they
+   choose one, not after. Amber, not red — nothing has gone wrong. */
+.omx-gate-demo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 18px;
+  padding: 9px 12px;
+  border: 1px solid rgba(224, 169, 85, 0.28);
+  border-radius: 8px;
+  background: rgba(224, 169, 85, 0.07);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--omx-text-dim, #b9b2a1);
+}
+
+.omx-gate-demo .dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: #e0a955;
+  box-shadow: 0 0 8px rgba(224, 169, 85, 0.9);
+}
+
+/* --------------------------------------------------------------- the field */
+/* `min-width: 0` because `flex: 1` alone is not enough to guarantee the panel
+   takes exactly the space the card leaves: a flex item's floor is its
+   content's min-content width, and the hero headline inside does not wrap
+   below its longest word. Without the floor removed, that word — not the
+   window — decides the panel's width. */
+.omx-gate-right {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  /* Not flat `--omx-ground`. The canvas over this is painted by a shader that
+     can fail or be momentarily blank — no WebGL, a driver that rejects the
+     shader, a frame lost while the drawing buffer is reallocated on resize —
+     and against a flat near-black those pixels read as the panel not reaching
+     the edge of the window rather than as a field that is dark just there.
+     This static gradient is what shows through, so the panel always occupies
+     its full width to the eye whatever the GPU is doing. */
+  background:
+    radial-gradient(120% 90% at 78% 12%,
+      rgba(var(--omx-accent-rgb, 211, 173, 85), 0.10), transparent 60%),
+    radial-gradient(100% 80% at 15% 88%,
+      rgba(var(--omx-accent-rgb, 211, 173, 85), 0.06), transparent 62%),
+    var(--omx-ground, #08080a);
+  border-left: 1px solid rgba(var(--omx-accent-rgb, 211, 173, 85), 0.09);
+}
+
+/* `inset: 0` sets the box; the 100% width/height are what a canvas needs on
+   top of it, because a canvas has an intrinsic size from its width/height
+   attributes that would otherwise fight the offsets on a fractional box. */
+.omx-gate-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Two passes, both from the original: a radial that pulls the centre down so
+   the type sits on something quiet, and a vertical fade that keeps the shader
+   from running into the top and bottom edges. */
+.omx-gate-vignette,
+.omx-gate-fade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.omx-gate-vignette {
+  background: radial-gradient(72% 68% at 50% 50%,
+    rgba(8, 8, 10, 0.82), rgba(8, 8, 10, 0.42) 55%, rgba(8, 8, 10, 0.12) 100%);
+}
+
+.omx-gate-fade {
+  background: linear-gradient(180deg,
+    rgba(8, 8, 10, 0.5), transparent 22%, transparent 78%, rgba(8, 8, 10, 0.6));
+}
+
+.omx-gate-hero {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 8%;
+}
+
+.omx-gate-hero .kicker {
+  font-family: var(--omx-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--omx-accent, #d3ad55);
+  margin-bottom: 22px;
+}
+
+/* The shimmer runs along a gradient wider than the text, which is why the
+   background is sized 200% and animated by position rather than by colour. */
+.omx-gate-hero h2 {
+  margin: 0;
+  font-weight: 400;
+  font-size: clamp(30px, 3.6vw, 54px);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  background: linear-gradient(100deg,
+    var(--omx-text, #f3ede1) 20%,
+    var(--omx-accent, #e0a955) 45%,
+    var(--omx-accent, #c9a45c) 55%,
+    var(--omx-text, #f3ede1) 80%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: omx-gate-shimmer 7s linear infinite;
+}
+
+@keyframes omx-gate-shimmer {
+  to { background-position: 200% center; }
+}
+
+.omx-gate-hero p {
+  max-width: 400px;
+  margin: 22px 0 30px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--omx-text-dim, rgba(243, 237, 225, 0.5));
+}
+
+.omx-gate-phrase {
+  min-height: 20px;
+  font-family: var(--omx-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint, rgba(243, 237, 225, 0.38));
+}
+
+.omx-gate-phrase span {
+  display: inline-block;
+  animation: omx-gate-phrase-in 500ms ease both;
+}
+
+@keyframes omx-gate-phrase-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.omx-gate-status {
+  position: absolute;
+  bottom: 26px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-family: var(--omx-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  letter-spacing: 0.28em;
+  color: var(--omx-text-faint, rgba(243, 237, 225, 0.32));
+}
+
+.omx-gate-status .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3fc586;
+  box-shadow: 0 0 8px #3fc586;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omx-gate-hero h2,
+  .omx-gate-phrase span { animation: none; }
+}
+
+/* Under 900px there is no room for two panels. The field goes rather than
+   shrinking: a 200px-wide strip of shader beside the card is decoration that
+   costs a GPU context. */
+@media (max-width: 900px) {
+  .omx-gate-right { display: none; }
+  .omx-gate-left { flex: 1; }
+}

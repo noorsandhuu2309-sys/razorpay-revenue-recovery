@@ -1,0 +1,10 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.bak.*
+squad_jobs/
+avalon_jobs/
+arena_jobs/
+.claude/
+.vscode/

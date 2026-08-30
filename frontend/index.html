@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OMNIX — Intelligence Workspace</title>
+    <!--
+      Appearance has to be on <html> before the first paint, or every reload
+      flashes the default dark-gold and then snaps to the user's theme. The
+      bundle cannot do it: it is a module script, so it is deferred until after
+      the document has been painted.
+
+      Kept intentionally dumb — two reads and two attributes. The real model
+      lives in src/workspace/lib/appearance.ts and re-applies the same values
+      on mount, so this staying in sync means matching two key names, not a
+      palette.
+    -->
+    <script>
+      (function () {
+        var r = document.documentElement
+        var mode = 'dark', accent = 'gold'
+        try {
+          var m = localStorage.getItem('omx-theme')
+          if (m === 'light' || m === 'dark') mode = m
+          else if (window.matchMedia
+            && matchMedia('(prefers-color-scheme: light)').matches) mode = 'light'
+          var a = localStorage.getItem('omx-accent')
+          if (['gold', 'red', 'blue', 'green', 'mono'].indexOf(a) !== -1) accent = a
+        } catch (e) { /* private mode */ }
+        r.setAttribute('data-theme', mode)
+        r.setAttribute('data-accent', accent)
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

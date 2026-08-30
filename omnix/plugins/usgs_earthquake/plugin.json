@@ -1,0 +1,80 @@
+{
+  "id": "usgs_earthquake",
+  "name": "USGS Earthquakes",
+  "version": "1.0.0",
+  "description": "Live and historical earthquake events from the USGS FDSN event service. No credentials required.",
+  "author": "OMNIX",
+  "category": "earth",
+  "enabled_by_default": true,
+  "permissions": ["network.read"],
+  "dependencies": [],
+  "secrets": [],
+  "configuration": {
+    "default_min_magnitude": 4.0,
+    "default_limit": 50,
+    "cache_ttl_s": 300,
+    "timeout_s": 20
+  },
+  "poll_seconds": 600,
+  "estimated_memory_mb": 8,
+  "data_sources": [
+    {
+      "id": "usgs_fdsn",
+      "name": "USGS FDSN Event Web Service",
+      "provider": "United States Geological Survey",
+      "docs_url": "https://earthquake.usgs.gov/fdsnws/event/1/",
+      "auth": "none",
+      "free": true,
+      "rate_limit": "No published hard quota; service asks for reasonable use and caps a single query at 20000 events.",
+      "license": "Public domain (US Government work)",
+      "attribution": "Data from the U.S. Geological Survey Earthquake Hazards Program"
+    }
+  ],
+  "tools": [
+    {
+      "name": "recent_earthquakes",
+      "description": "Recent earthquakes worldwide, most recent first. Filter by magnitude and time window.",
+      "permissions": ["network.read"],
+      "timeout_s": 25.0,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "min_magnitude": {"type": "number", "description": "Minimum magnitude, e.g. 4.5"},
+          "hours": {"type": "number", "description": "Look back this many hours (default 24)"},
+          "limit": {"type": "integer", "description": "Maximum events to return (1-500)"}
+        }
+      }
+    },
+    {
+      "name": "earthquakes_near",
+      "description": "Earthquakes within a radius of a point, most recent first.",
+      "permissions": ["network.read"],
+      "timeout_s": 25.0,
+      "input_schema": {
+        "type": "object",
+        "required": ["latitude", "longitude"],
+        "properties": {
+          "latitude": {"type": "number"},
+          "longitude": {"type": "number"},
+          "radius_km": {"type": "number", "description": "Search radius in kilometres (default 500)"},
+          "min_magnitude": {"type": "number"},
+          "days": {"type": "number", "description": "Look back this many days (default 30)"},
+          "limit": {"type": "integer"}
+        }
+      }
+    },
+    {
+      "name": "earthquake_summary",
+      "description": "Counts and largest event for a period, for a dashboard tile.",
+      "permissions": ["network.read"],
+      "timeout_s": 25.0,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "hours": {"type": "number"},
+          "min_magnitude": {"type": "number"}
+        }
+      }
+    }
+  ]
+}

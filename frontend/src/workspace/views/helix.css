@@ -1,0 +1,396 @@
+/* ===========================================================================
+   HELIX — the bioinformatics surface
+   ===========================================================================
+   Its own stylesheet, like the lock screen's, rather than another block on the
+   end of a 199KB workspace.css. This view is self-contained and so is its CSS.
+
+   Two panes: the answer on the left, the corpus on the right. The papers pane
+   is not a sidebar of extras — it is the evidence, and it stays visible while
+   the answer streams so a claim can be checked as it is being written.
+
+   Everything uses the shared --omx-* tokens, so HELIX follows whichever theme
+   the user chose exactly like every other view. It defines no colours.
+   ========================================================================= */
+.omx-helix {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  animation: omx-fade-up 320ms var(--omx-ease);
+}
+
+/* -- header ---------------------------------------------------------------- */
+.omx-helix-head {
+  flex: 0 0 auto;
+  padding: 16px 22px 12px;
+  border-bottom: 1px solid var(--omx-line);
+  background: var(--omx-surface);
+}
+.omx-helix-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+.omx-helix-title h1 {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+  color: var(--omx-text);
+}
+.omx-helix-title svg { color: var(--omx-accent); }
+.omx-helix-count {
+  font-family: var(--omx-mono);
+  font-size: 11px;
+  color: var(--omx-text-faint);
+  margin-left: auto;
+}
+
+.omx-helix-ask {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.omx-helix-ask > input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 9px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--omx-line);
+  background: var(--omx-ground);
+  color: var(--omx-text);
+  font-size: 13.5px;
+  font-family: inherit;
+  transition: border-color 160ms var(--omx-ease);
+}
+.omx-helix-ask > input:focus {
+  outline: none;
+  border-color: var(--omx-line-strong);
+}
+.omx-helix-ask > input::placeholder { color: var(--omx-text-faint); }
+
+.omx-helix-deep {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--omx-mono);
+  font-size: 11px;
+  color: var(--omx-text-dim);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.omx-helix-ask button[type="submit"] {
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--omx-line-strong);
+  background: var(--omx-accent);
+  color: var(--omx-accent-ink);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.omx-helix-ask button[type="submit"]:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Topic filter. Wraps rather than scrolls: fifteen topics is a map of the
+   field, and hiding two thirds of it behind a scroll hides the point. */
+.omx-helix-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 11px;
+}
+.omx-helix-topics button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--omx-line-neutral);
+  background: transparent;
+  color: var(--omx-text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  transition: border-color 140ms var(--omx-ease), color 140ms var(--omx-ease);
+}
+.omx-helix-topics button:hover {
+  color: var(--omx-text);
+  border-color: var(--omx-line);
+}
+.omx-helix-topics button.on {
+  border-color: var(--omx-line-strong);
+  color: var(--omx-accent);
+  background: var(--omx-gold-glow-2);
+}
+.omx-helix-badge {
+  font-family: var(--omx-mono);
+  font-size: 9.5px;
+  opacity: 0.62;
+}
+
+/* -- body ------------------------------------------------------------------ */
+.omx-helix-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+}
+/* One column when there is not room for two. The papers pane goes underneath
+   rather than away: it is evidence, not chrome. */
+@media (max-width: 1080px) {
+  .omx-helix-body { grid-template-columns: minmax(0, 1fr); }
+  .omx-helix-papers {
+    border-left: none;
+    border-top: 1px solid var(--omx-line);
+  }
+}
+
+.omx-helix-answer {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px 26px 44px;
+}
+.omx-helix-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: var(--omx-mono);
+  font-size: 10.5px;
+  color: var(--omx-text-faint);
+  margin-bottom: 14px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--omx-line-neutral);
+}
+.omx-helix-instant { color: var(--omx-accent); }
+.omx-helix-waiting {
+  color: var(--omx-text-faint);
+  font-size: 13px;
+}
+.omx-helix-error {
+  margin-top: 14px;
+  padding: 10px 13px;
+  border-radius: 8px;
+  border: 1px solid var(--omx-line);
+  color: var(--omx-text-dim);
+  font-size: 12.5px;
+}
+
+/* -- intro / topic card ---------------------------------------------------- */
+.omx-helix-intro { max-width: 62ch; }
+.omx-helix-intro h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--omx-text);
+  margin: 0 0 8px;
+}
+.omx-helix-intro h4 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint);
+  margin: 18px 0 7px;
+}
+.omx-helix-intro p {
+  font-size: 13px;
+  line-height: 1.62;
+  color: var(--omx-text-dim);
+  margin: 0 0 6px;
+}
+.omx-helix-intro ul {
+  margin: 0;
+  padding-left: 17px;
+}
+.omx-helix-intro li {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--omx-text-dim);
+}
+.omx-helix-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.omx-helix-tools code {
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--omx-line-neutral);
+  background: var(--omx-surface-2);
+  font-family: var(--omx-mono);
+  font-size: 11px;
+  color: var(--omx-text-dim);
+  cursor: pointer;
+}
+.omx-helix-tools code:hover {
+  color: var(--omx-accent);
+  border-color: var(--omx-line);
+}
+
+.omx-helix-examples {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+}
+.omx-helix-examples button {
+  text-align: left;
+  padding: 9px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--omx-line-neutral);
+  background: var(--omx-surface-2);
+  color: var(--omx-text-dim);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 140ms var(--omx-ease), border-color 140ms var(--omx-ease);
+}
+.omx-helix-examples button:hover {
+  color: var(--omx-text);
+  border-color: var(--omx-line);
+}
+
+/* -- cited ----------------------------------------------------------------- */
+.omx-helix-cited {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--omx-line);
+}
+.omx-helix-cited h4 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint);
+  margin: 0 0 10px;
+}
+.omx-helix-cited ol {
+  margin: 0;
+  padding-left: 20px;
+}
+.omx-helix-cited li { margin-bottom: 10px; }
+.omx-helix-cited a {
+  font-size: 12.5px;
+  color: var(--omx-text);
+  text-decoration: none;
+  line-height: 1.5;
+}
+.omx-helix-cited a:hover {
+  color: var(--omx-accent);
+  text-decoration: underline;
+}
+
+/* -- papers pane ----------------------------------------------------------- */
+.omx-helix-papers {
+  overflow-y: auto;
+  min-height: 0;
+  border-left: 1px solid var(--omx-line);
+  background: var(--omx-surface);
+  padding: 14px 16px 40px;
+}
+.omx-helix-papers-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--omx-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint);
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--omx-line-neutral);
+}
+.omx-helix-ms {
+  margin-left: auto;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.omx-helix-papers ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.omx-helix-papers li {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--omx-line-neutral);
+}
+.omx-helix-papers a {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--omx-text);
+  text-decoration: none;
+  display: block;
+}
+.omx-helix-papers a:hover { color: var(--omx-accent); }
+.omx-helix-where {
+  display: block;
+  font-family: var(--omx-mono);
+  font-size: 10px;
+  color: var(--omx-text-faint);
+  margin-top: 4px;
+}
+.omx-helix-snip {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--omx-text-dim);
+  margin: 6px 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.omx-helix-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.omx-helix-tags span {
+  font-family: var(--omx-mono);
+  font-size: 9.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--omx-surface-2);
+  color: var(--omx-text-faint);
+}
+.omx-helix-hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--omx-text-faint);
+  margin: 14px 0 0;
+}
+
+/* -- corpus missing -------------------------------------------------------- */
+.omx-helix-empty {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--omx-text-dim);
+}
+.omx-helix-empty svg {
+  color: var(--omx-accent);
+  opacity: 0.7;
+}
+.omx-helix-empty h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--omx-text);
+  margin: 0;
+}
+.omx-helix-empty pre {
+  font-family: var(--omx-mono);
+  font-size: 12px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--omx-line);
+  background: var(--omx-surface-2);
+  color: var(--omx-accent);
+}

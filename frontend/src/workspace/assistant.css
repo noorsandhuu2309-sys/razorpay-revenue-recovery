@@ -1,0 +1,451 @@
+/* Assistant surfaces: the model picker, the model roster, artifacts, charts.
+ *
+ * Split out of workspace.css for the reason graph.css, login.css and map.css
+ * were: that sheet is one global ~4300-line scope with no modules, and every
+ * new class in it is a collision risk against something it already defines.
+ * Everything here is prefixed per surface (omx-mp-, omx-art-, omx-chart-,
+ * omx-model-) and none of the stems existed before — checked against the sheet
+ * rather than assumed.
+ *
+ * Imported by BOTH Home.tsx and Settings.tsx. Vite dedupes it, and the two
+ * views genuinely share the switch and roster-card styles: the picker in the
+ * composer and the toggles in Settings are two views of one roster, and letting
+ * them drift visually would make them look like unrelated features.
+ *
+ * Colours come only from the theme tokens, so all ten theme × accent
+ * combinations are covered without a second palette here.
+ */
+
+/* ===========================================================================
+   SWITCHES
+   =========================================================================== */
+/* A real switch rather than a checkbox: these turn a model off for the whole
+   product, and a 13px checkbox does not read as an act with consequences. */
+.omx-switch {
+  position: relative; flex: none;
+  width: 34px; height: 19px; padding: 0; border-radius: 20px;
+  border: 1px solid var(--omx-line-strong); background: var(--omx-surface-2);
+  cursor: pointer;
+  transition: background var(--omx-fast) var(--omx-ease),
+              border-color var(--omx-fast) var(--omx-ease);
+}
+.omx-switch .knob {
+  position: absolute; top: 2px; left: 2px;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: var(--omx-text-faint);
+  transition: transform var(--omx-fast) var(--omx-spring),
+              background var(--omx-fast) var(--omx-ease);
+}
+.omx-switch.on {
+  background: var(--omx-accent, var(--omx-gold));
+  border-color: var(--omx-accent, var(--omx-gold));
+}
+.omx-switch.on .knob {
+  transform: translateX(15px); background: var(--omx-accent-ink);
+}
+/* Locked reads as ON and inert. Dimming it to look OFF would be a lie about
+   what the product is actually doing. */
+.omx-switch.locked { cursor: not-allowed; opacity: 0.55; }
+
+/* ===========================================================================
+   MODEL ROSTER  (Settings)
+   =========================================================================== */
+.omx-models {
+  display: grid; gap: 18px; margin-top: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  align-items: start;
+}
+.omx-models-group { display: grid; gap: 7px; align-content: start; }
+
+/* `omx-mrcard`, NOT `omx-model`. workspace.css already defines `.omx-model`
+   TWICE — both ARENA's seat rows, both `display: flex` — and Vite bundles that
+   sheet after this one, so at equal specificity it wins and these cards laid
+   themselves out sideways with the name, blurb and footer in three columns.
+   The DOM was correct and only the geometry was wrong, which is exactly how
+   this class of bug hides. Grep the sheet before adding a stem here. */
+.omx-mrcard {
+  display: grid; gap: 6px; padding: 12px 14px;
+  border: 1px solid var(--omx-line); border-radius: var(--omx-r);
+  background: var(--omx-surface);
+  transition: border-color var(--omx-fast) var(--omx-ease),
+              opacity var(--omx-fast) var(--omx-ease);
+}
+/* An off model stays fully readable — it is still information about what the
+   product can run. Only its emphasis drops. */
+.omx-mrcard.off { opacity: 0.5; }
+.omx-mrcard .hd { display: flex; align-items: center; gap: 8px; }
+.omx-mrcard .nm { font-size: 13.5px; font-weight: 600; flex: 1; min-width: 0; }
+.omx-mrcard .bl {
+  margin: 0; font-size: 12px; line-height: 1.55; color: var(--omx-text-dim);
+}
+.omx-mrcard .ft {
+  display: flex; flex-wrap: wrap; gap: 4px 12px;
+  font-size: 10.5px; color: var(--omx-text-faint);
+}
+.omx-mrcard .ft .lic { color: var(--omx-accent, var(--omx-gold)); opacity: 0.85; }
+
+.omx-pill.xs {
+  padding: 1px 6px; font-size: 9.5px; letter-spacing: 0.06em;
+  text-transform: uppercase; font-family: var(--omx-mono);
+}
+.omx-pill.xs.ok { color: var(--omx-pos); border-color: var(--omx-pos); }
+.omx-pill.xs.bad {
+  color: var(--omx-vd-unsupported); border-color: var(--omx-vd-unsupported);
+}
+
+.omx-set-warn {
+  margin: 8px 0; padding: 10px 12px; border-radius: var(--omx-r);
+  border: 1px solid var(--omx-warn);
+  background: color-mix(in srgb, var(--omx-warn) 10%, transparent);
+  font-size: 12.5px; line-height: 1.55; color: var(--omx-text-dim);
+}
+.omx-set-warn code {
+  font-family: var(--omx-mono); font-size: 11.5px; color: var(--omx-text);
+}
+
+/* ===========================================================================
+   MODEL PICKER  (chat composer bar)
+   =========================================================================== */
+.omx-mp { position: relative; }
+.omx-mp-pin {
+  padding: 0 5px; border-radius: 20px; font-size: 9px; letter-spacing: 0.08em;
+  text-transform: uppercase; font-family: var(--omx-mono);
+  background: var(--omx-warn); color: var(--omx-accent-ink);
+}
+/* Anchored to the RIGHT edge: the picker sits at the right end of the bar, so
+   a left-anchored popover would hang off the window. */
+.omx-mp-pop {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 20;
+  width: min(30rem, calc(100vw - 40px));
+  max-height: min(30rem, 70vh); overflow-y: auto;
+  display: grid; gap: 10px; align-content: start;
+  padding: 12px; border: 1px solid var(--omx-line-strong);
+  border-radius: var(--omx-r-lg); background: var(--omx-surface);
+  box-shadow: var(--omx-shadow-3);
+  animation: omx-fade-up 140ms var(--omx-ease);
+}
+.omx-mp-group { display: grid; gap: 4px; }
+.omx-mp-row {
+  display: grid; gap: 3px; width: 100%; text-align: left;
+  padding: 9px 11px; border: 1px solid transparent;
+  border-radius: var(--omx-r); background: none; color: inherit;
+  font: inherit; cursor: pointer;
+  transition: background var(--omx-fast) var(--omx-ease),
+              border-color var(--omx-fast) var(--omx-ease);
+}
+.omx-mp-row:hover { background: var(--omx-surface-2); }
+.omx-mp-row.on {
+  border-color: var(--omx-accent, var(--omx-gold));
+  background: var(--omx-gold-glow);
+}
+.omx-mp-row .hd { display: flex; align-items: center; gap: 8px; }
+.omx-mp-row .nm { font-size: 13px; font-weight: 600; flex: 1; min-width: 0; }
+.omx-mp-row .tt { font-size: 10.5px; color: var(--omx-text-faint); }
+.omx-mp-row .bl {
+  font-size: 11.5px; line-height: 1.5; color: var(--omx-text-dim);
+}
+.omx-mp-row .ft {
+  display: flex; gap: 10px; font-size: 10px; color: var(--omx-text-faint);
+}
+.omx-mp-row .ft .lic { color: var(--omx-accent, var(--omx-gold)); opacity: 0.8; }
+.omx-mp-row.auto { border-color: var(--omx-line); }
+
+.omx-mp-note {
+  padding: 8px 10px; border-radius: var(--omx-r);
+  background: var(--omx-surface-2); font-size: 11.5px; line-height: 1.5;
+  color: var(--omx-text-dim);
+}
+.omx-mp-note.bad { color: var(--omx-vd-unsupported); }
+.omx-mp-note code { font-family: var(--omx-mono); font-size: 11px; }
+.omx-mp-foot {
+  padding-top: 8px; border-top: 1px solid var(--omx-line-neutral);
+  font-size: 11px; color: var(--omx-text-faint); line-height: 1.5;
+}
+
+/* ===========================================================================
+   ARTIFACTS
+   =========================================================================== */
+.omx-artcard {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  margin: 10px 0; padding: 11px 13px; text-align: left;
+  border: 1px solid var(--omx-line); border-radius: var(--omx-r);
+  background: var(--omx-surface); color: inherit; font: inherit;
+  cursor: pointer;
+  transition: border-color var(--omx-fast) var(--omx-ease),
+              background var(--omx-fast) var(--omx-ease);
+}
+.omx-artcard:hover {
+  border-color: var(--omx-accent, var(--omx-gold));
+  background: var(--omx-surface-2);
+}
+.omx-artcard.on { border-color: var(--omx-accent, var(--omx-gold)); }
+.omx-artcard .ic {
+  display: grid; place-items: center; flex: none;
+  width: 30px; height: 30px; border-radius: var(--omx-r);
+  background: var(--omx-gold-glow); color: var(--omx-accent, var(--omx-gold));
+}
+.omx-artcard .bd { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.omx-artcard .t {
+  font-size: 13px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-artcard .s { font-size: 11px; color: var(--omx-text-faint); }
+.omx-artcard .go {
+  flex: none; font-family: var(--omx-mono); font-size: 9.5px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--omx-accent, var(--omx-gold));
+}
+
+/* A real second column at desk widths, so the artifact and the request that
+   produced it are readable at the same time. `.omx-chat` is otherwise a
+   single-column grid; this adds the second track only when one is open. */
+.omx-chat.with-art { grid-template-columns: minmax(0, 1fr) minmax(0, 46%); }
+.omx-chat.with-art .omx-chat-main { grid-column: 1; }
+.omx-artpanel {
+  grid-column: 2; grid-row: 1 / -1; min-width: 0;
+  display: grid; grid-template-rows: auto minmax(0, 1fr);
+  border-left: 1px solid var(--omx-line);
+  background: var(--omx-surface);
+  animation: omx-fade-in 160ms var(--omx-ease);
+}
+.omx-artpanel-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; border-bottom: 1px solid var(--omx-line-neutral);
+}
+.omx-artpanel-head .ttl { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.omx-artpanel-head .t {
+  font-size: 13.5px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.omx-artpanel-head .acts {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.omx-artpanel-tabs {
+  display: flex; gap: 1px; padding: 2px; border-radius: var(--omx-r);
+  background: var(--omx-surface-2);
+}
+.omx-artpanel-tabs button {
+  padding: 4px 10px; border: 0; border-radius: calc(var(--omx-r) - 2px);
+  background: none; color: var(--omx-text-dim);
+  font: inherit; font-size: 11.5px; cursor: pointer;
+}
+.omx-artpanel-tabs button.on {
+  background: var(--omx-surface); color: var(--omx-text);
+  box-shadow: var(--omx-shadow-1);
+}
+.omx-artpanel-body { min-height: 0; overflow: auto; }
+/* The frame paints its own ground: `#fff` rather than a theme token, because
+   model-authored HTML overwhelmingly assumes a white page, and a transparent
+   frame over the dark shell renders black text on black. */
+.omx-artpanel-frame {
+  width: 100%; height: 100%; border: 0; display: block; background: #fff;
+}
+.omx-artpanel-src {
+  margin: 0; padding: 14px 16px; overflow: auto;
+  font-family: var(--omx-mono); font-size: 12px; line-height: 1.6;
+  white-space: pre; tab-size: 2; color: var(--omx-text);
+}
+.omx-artpanel-doc { padding: 16px 20px; }
+
+/* Below this the two columns are each too narrow to read, so the panel becomes
+   an overlay on the conversation rather than a squeezed sibling. */
+@media (max-width: 1100px) {
+  .omx-chat.with-art { grid-template-columns: minmax(0, 1fr); }
+  .omx-artpanel {
+    position: absolute; inset: 0; z-index: 8; grid-column: 1;
+    box-shadow: var(--omx-shadow-3);
+  }
+}
+
+/* ===========================================================================
+   CHARTS
+   =========================================================================== */
+.omx-chart {
+  margin: 14px 0; padding: 14px 16px 10px;
+  border: 1px solid var(--omx-line); border-radius: var(--omx-r-lg);
+  background: var(--omx-surface);
+  /* Sized against itself so the pie legend can move beside the dial when the
+     chart is wide, whether that width came from the window or from the
+     artifact panel being open. */
+  container-type: inline-size;
+}
+.omx-chart-title {
+  margin-bottom: 10px; font-size: 13px; font-weight: 600; color: var(--omx-text);
+}
+.omx-chart-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.omx-chart-svg.pie { max-width: 300px; margin: 0 auto; }
+
+.omx-chart-grid { stroke: var(--omx-line-neutral); stroke-width: 1; }
+.omx-chart-grid.zero { stroke: var(--omx-line-strong); }
+.omx-chart-tick, .omx-chart-cat {
+  font-family: var(--omx-mono); font-size: 10px; fill: var(--omx-text-faint);
+}
+.omx-chart-axis {
+  font-family: var(--omx-sans); font-size: 10.5px; fill: var(--omx-text-dim);
+}
+.omx-chart-bar, .omx-chart-slice, .omx-chart-dot {
+  transition: opacity var(--omx-fast) var(--omx-ease);
+}
+.omx-chart-bar:hover, .omx-chart-slice:hover, .omx-chart-dot:hover { opacity: 0.78; }
+.omx-chart-line {
+  stroke-width: 2; stroke-linejoin: round; stroke-linecap: round;
+}
+.omx-chart-area { opacity: 0.16; }
+.omx-chart-slice { stroke: var(--omx-surface); stroke-width: 1.5; }
+
+.omx-chart-pie {
+  display: grid; gap: 16px; align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 30rem) {
+  .omx-chart-pie { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); }
+}
+.omx-chart-legend {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: 5px;
+  font-size: 11.5px;
+}
+.omx-chart-legend.row {
+  grid-auto-flow: column; grid-auto-columns: max-content;
+  justify-content: start; gap: 14px; margin-top: 10px;
+}
+.omx-chart-legend li { display: flex; align-items: center; gap: 7px; }
+.omx-chart-legend .sw { flex: none; width: 10px; height: 10px; border-radius: 2px; }
+.omx-chart-legend .lb { flex: 1; min-width: 0; color: var(--omx-text-dim); }
+.omx-chart-legend .vl { color: var(--omx-text-faint); font-size: 11px; }
+.omx-chart-bad {
+  padding: 12px; font-size: 12px; color: var(--omx-text-faint); font-style: italic;
+}
+
+/* ===========================================================================
+   LIVE ANSWER — how a streaming reply arrives on screen
+   =========================================================================== */
+/* Character reveal is handled in lib/useSmoothText.ts. This is the other half:
+   each block eases in as it is completed, so a heading, a list or a table
+   arrives as a considered element rather than popping into place. Only the
+   ENTRY is animated — never position or size, which would reflow the
+   conversation under the reader while they are reading it. */
+.omx-md-live > * {
+  animation: omx-md-arrive 260ms var(--omx-ease) both;
+}
+@keyframes omx-md-arrive {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: none; }
+}
+/* A code block is the one thing people watch write itself, and fading each new
+   one in makes a multi-block answer flicker. It arrives without the lift. */
+.omx-md-live > .omx-md-code {
+  animation: omx-md-fade 200ms var(--omx-ease) both;
+}
+@keyframes omx-md-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Respect the OS setting. The reveal itself already short-circuits for reduced
+   motion; this covers the CSS half. */
+@media (prefers-reduced-motion: reduce) {
+  .omx-md-live > *, .omx-md-live > .omx-md-code { animation: none; }
+}
+
+/* ===========================================================================
+   SHARE MENU — copy and save
+   =========================================================================== */
+.omx-share { position: relative; display: inline-flex; }
+/* FIXED, not absolute, and positioned from JS. Its usual parent chain runs
+   through `.omx-chat-scroll` (overflow: hidden auto), which clips an absolutely
+   positioned child — the menu opened correctly and was simply invisible,
+   stranded outside the scroll box. Same trap as RailTips. The component
+   measures the trigger and flips the menu above or below depending on room. */
+.omx-share-pop {
+  position: fixed; z-index: 60;
+  width: 15rem; display: grid; gap: 2px; padding: 8px;
+  border: 1px solid var(--omx-line-strong); border-radius: var(--omx-r-lg);
+  background: var(--omx-surface); box-shadow: var(--omx-shadow-3);
+  animation: omx-fade-up 130ms var(--omx-ease);
+}
+.omx-share-pop > .omx-label { padding: 6px 8px 2px; }
+.omx-share-row {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  gap: 9px; width: 100%; padding: 7px 9px; text-align: left;
+  border: 0; border-radius: var(--omx-r); background: none; color: inherit;
+  font: inherit; cursor: pointer;
+  transition: background var(--omx-fast) var(--omx-ease);
+}
+.omx-share-row:hover:not(:disabled) { background: var(--omx-surface-2); }
+.omx-share-row:disabled { opacity: 0.5; cursor: default; }
+.omx-share-row .n { font-size: 12.5px; }
+.omx-share-row .h { font-size: 10.5px; color: var(--omx-text-faint); }
+
+/* ===========================================================================
+   VOICE
+   =========================================================================== */
+.omx-orb { display: block; }
+
+/* The full-screen hands-free surface. Covers the conversation on purpose — you
+   are not meant to be reading it while this is open. */
+.omx-vm {
+  position: absolute; inset: 0; z-index: 30;
+  display: grid; grid-template-rows: auto 1fr auto;
+  background: color-mix(in srgb, var(--omx-ground) 94%, transparent);
+  backdrop-filter: blur(14px);
+  animation: omx-fade-in 180ms var(--omx-ease);
+}
+.omx-vm-close {
+  justify-self: end; margin: 14px 16px 0;
+  display: grid; place-items: center; width: 32px; height: 32px;
+  border: 1px solid var(--omx-line); border-radius: 50%;
+  background: var(--omx-surface); color: var(--omx-text-dim); cursor: pointer;
+  transition: color var(--omx-fast) var(--omx-ease),
+              border-color var(--omx-fast) var(--omx-ease);
+}
+.omx-vm-close:hover {
+  color: var(--omx-text); border-color: var(--omx-line-strong);
+}
+
+.omx-vm-stage {
+  display: grid; justify-items: center; align-content: center; gap: 6px;
+  padding: 0 24px; text-align: center; min-height: 0; overflow-y: auto;
+}
+.omx-vm-orb {
+  position: relative; display: grid; place-items: center;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  border-radius: 50%;
+}
+.omx-vm-orb:focus-visible {
+  outline: 2px solid var(--omx-accent, var(--omx-gold)); outline-offset: 6px;
+}
+/* The icon sits at the orb's centre of mass, over the canvas. */
+.omx-vm-icon {
+  position: absolute; display: grid; place-items: center;
+  color: var(--omx-accent-ink); pointer-events: none;
+}
+
+.omx-vm-state {
+  margin-top: 10px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em;
+}
+.omx-vm-state.s-listening { color: var(--omx-accent, var(--omx-gold)); }
+.omx-vm-state.s-thinking { color: var(--omx-text-dim); }
+.omx-vm-state.s-speaking { color: var(--omx-pos); }
+.omx-vm-hint { font-size: 12.5px; color: var(--omx-text-faint); }
+
+.omx-vm-error {
+  margin-top: 12px; max-width: 30rem; padding: 9px 13px;
+  border: 1px solid var(--omx-vd-unsupported); border-radius: var(--omx-r);
+  background: color-mix(in srgb, var(--omx-vd-unsupported) 10%, transparent);
+  font-size: 12.5px; line-height: 1.5; color: var(--omx-text-dim);
+}
+
+.omx-vm-said, .omx-vm-reply {
+  margin-top: 18px; max-width: 34rem; display: grid; gap: 4px;
+  animation: omx-fade-up 220ms var(--omx-ease);
+}
+.omx-vm-said p {
+  margin: 0; font-size: 16px; line-height: 1.5; color: var(--omx-text-dim);
+}
+/* The answer is set larger than the question: it is the thing you glance up to
+   read, and at arm's length from a laptop 15px is not enough. */
+.omx-vm-reply p {
+  margin: 0; font-size: 17px; line-height: 1.6; color: var(--omx-text);
+}
+
+.omx-vm-foot {
+  padding: 14px 20px 18px; text-align: center;
+  font-size: 11.5px; color: var(--omx-text-faint);
+}

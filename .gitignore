@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environment (never commit — recreate with requirements.txt)
+.venv/
+venv/
+env/
+
+# Secrets — API keys live here and must NEVER be committed.
+omnix_secrets.json
+omnix_secrets
+
+# Accounts and live sessions. Password hashes (scrypt), session tokens and
+# reset tokens. Committing this leaks every account on the machine, and a
+# session token in git history is valid until it expires.
+omnix_auth.json
+
+# Per-machine model on/off toggles. Runtime preference, not source.
+omnix_model_prefs.json
+
+# OMNIX runtime data / generated artifacts
+avalon_jobs/
+squad_jobs/
+arena_jobs/
+omnix_knowledge_cache.json
+omnix_persistent_memory.json
+omnix_agent_knowledge.json
+*.log
+*.bak.*
+
+# Platform database and TERRA corpus — local runtime state, not source.
+# The schema is created by core.db on first run; the corpus refills from ingest.
+omnix_platform.db
+omnix_platform.db-shm
+omnix_platform.db-wal
+omnix_terra_store.json
+omnix_terra_graph.json
+
+# HELIX's bioinformatics corpus: 7MB of PubMed records, rebuilt from the source
+# by `python -m omnix.helix.ingest`. Generated data, like the graph and the
+# knowledge cache above — the queries that produce it live in omnix/helix/topics.py,
+# which IS tracked, so the corpus is reproducible without being committed.
+omnix_helix_corpus.json
+omnix_helix_corpus.tmp
+
+# The Intelligence Workspace app (frontend/) IS tracked as of 2026-08-03 — it
+# is the product surface being built, served at /workspace. See WORKSPACE.md.
+# Only its dependencies and build output stay out.
+frontend/node_modules/
+frontend/dist/
+omnix/webapp/
+
+# Playwright MCP scratch output
+.playwright-mcp/
+
+# Editor / OS
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+.vercel
+
+# Plugin runtime state: which plugins the user enabled, and which permissions
+# were granted. Per-machine decisions, not source.
+omnix_plugin_state.json
+omnix_permissions.json
+
+# Timestamped database backups (omnix_platform.db.bak-YYYYMMDD-HHMMSS).
+# Live account data, same reason as the database itself.
+omnix_platform.db.bak-*

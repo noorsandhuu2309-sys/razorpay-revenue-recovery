@@ -1,0 +1,1018 @@
+/* The World Map — the `omx-gx-*` surface.
+ *
+ * This lives beside MapView rather than in workspace.css for one reason that
+ * is not organisational: it must load AFTER `maplibre-gl.css`, and it only
+ * does so reliably if it is imported by the same lazily-loaded chunk. See the
+ * specificity note below.
+ *
+ * It follows workspace.css's three rules — elevation is earned (hairline AND
+ * shadow), type has a scale (four sizes, mono for data only), spacing is a 4px
+ * grid — and reads only derived tokens, so all ten theme x accent combinations
+ * come out right without a single rule here knowing which one is active.
+ *
+ * ==========================================================================
+ * THE ONE RULE THAT IS NOT COSMETIC
+ * ==========================================================================
+ * `maplibre-gl.css` sets `.maplibregl-map { position: relative }` on the very
+ * element that carries `.omx-gx-map`. Both selectors are (0,1,0), so the later
+ * stylesheet wins — and because this view is lazily loaded, MapLibre's chunk
+ * CSS is injected after workspace.css. The map container then has
+ * `position: relative` with no height, collapses to 0px, and the map is
+ * invisible with no error in the console.
+ *
+ * `.omx-gx-mapwrap .omx-gx-map` is (0,2,0) and wins regardless of order. Do
+ * not "simplify" it back to a single class.
+ */
+
+/* ==========================================================================
+   Shell
+   ========================================================================== */
+.omx-gx {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--omx-ground);
+  font-family: var(--omx-sans);
+  color: var(--omx-text);
+}
+
+.omx-gx-mapwrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* (0,2,0) — see the header. */
+.omx-gx-mapwrap .omx-gx-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--omx-ground);
+}
+
+.omx-gx-mapnote {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-sm);
+  letter-spacing: 0.04em;
+  color: var(--omx-text-faint);
+  pointer-events: none;
+}
+
+/* MapLibre's own furniture, re-skinned to the workspace palette. Left alone
+   it ships a white panel with a blue focus ring into a black application. */
+.omx-gx .maplibregl-ctrl-group {
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-line);
+  border-radius: var(--omx-r);
+  box-shadow: var(--omx-shadow-2);
+  overflow: hidden;
+}
+.omx-gx .maplibregl-ctrl-group button + button { border-top: 1px solid var(--omx-line); }
+.omx-gx .maplibregl-ctrl-group button { background: transparent; }
+.omx-gx .maplibregl-ctrl-group button:hover { background: var(--omx-raised); }
+.omx-gx .maplibregl-ctrl-group button span { filter: invert(1) opacity(0.7); }
+.omx-gx .maplibregl-ctrl-scale {
+  background: color-mix(in srgb, var(--omx-ground) 72%, transparent);
+  border: 1px solid var(--omx-line);
+  border-top: none;
+  color: var(--omx-text-dim);
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+}
+.omx-gx .maplibregl-ctrl-attrib {
+  background: color-mix(in srgb, var(--omx-ground) 72%, transparent);
+  color: var(--omx-text-faint);
+  font-size: var(--omx-t-xs);
+}
+.omx-gx .maplibregl-ctrl-attrib a { color: var(--omx-text-dim); }
+
+/* ==========================================================================
+   Floating furniture over the map
+   ========================================================================== */
+.omx-gx-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 420px);
+}
+
+.omx-gx-notice {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 520px;
+  padding: 8px 8px 8px 14px;
+  background: var(--omx-raised);
+  border: 1px solid var(--omx-line-strong);
+  border-radius: var(--omx-r-lg);
+  box-shadow: var(--omx-shadow-3);
+  font-size: var(--omx-t-sm);
+  color: var(--omx-text);
+  animation: omx-gx-drop var(--omx-fast) var(--omx-ease);
+}
+
+@keyframes omx-gx-drop {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.omx-gx-x {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--omx-r);
+  color: var(--omx-text-faint);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background var(--omx-fast) var(--omx-ease),
+              color var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-x:hover { background: var(--omx-surface-2); color: var(--omx-text); }
+
+/* The country card — follows the cursor's country, so it must never sit under
+   the pointer or it flickers. Bottom-left, out of the way of both the sidebar
+   and the zoom controls. */
+.omx-gx-country {
+  position: absolute;
+  left: 12px;
+  bottom: 44px;
+  z-index: 3;
+  width: 250px;
+  padding: 12px 14px;
+  background: var(--omx-raised);
+  border: 1px solid var(--omx-line-strong);
+  border-radius: var(--omx-r-lg);
+  box-shadow: var(--omx-shadow-3);
+  pointer-events: none;
+  animation: omx-gx-fade var(--omx-fast) var(--omx-ease);
+}
+
+@keyframes omx-gx-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.omx-gx-country .mc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: var(--omx-t-md);
+}
+.omx-gx-country .mc-head strong { font-weight: 550; }
+.omx-gx-country .mc-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
+}
+.omx-gx-country .mc-iso { margin-left: auto; }
+
+/* The readout strip along the bottom edge. Mono throughout: every item in it
+   is a measurement. */
+.omx-gx-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 28px;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--omx-ground) 82%, transparent);
+  border-top: 1px solid var(--omx-line);
+  backdrop-filter: blur(8px);
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.04em;
+  color: var(--omx-text-faint);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.omx-gx-strip-name {
+  color: var(--omx-text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40%;
+}
+.omx-gx-strip-item { flex: none; }
+.omx-gx-strip-item::before {
+  content: '·';
+  margin-right: 16px;
+  color: var(--omx-line-strong);
+}
+
+/* ==========================================================================
+   Sidebar
+   ==========================================================================
+   Floats over the map rather than sitting beside it, so opening and closing it
+   never resizes the canvas — a MapLibre resize re-requests every visible tile.
+   Width matches the Inspector so the two surfaces line up when a user switches
+   between views. */
+.omx-gx-side {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 28px; /* clears the readout strip */
+  z-index: 4;
+  width: var(--omx-inspector);
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: color-mix(in srgb, var(--omx-surface) 94%, transparent);
+  border-left: 1px solid var(--omx-line-strong);
+  box-shadow: var(--omx-shadow-3);
+  backdrop-filter: blur(14px);
+  transition: transform var(--omx-slow) var(--omx-ease);
+}
+.omx-gx-side[data-open='false'] {
+  transform: translateX(100%);
+  box-shadow: none;
+  border-left-color: transparent;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+/* The handle rides on the sidebar's leading edge and stays reachable when the
+   panel is closed — which is the whole point, so it is deliberately outside
+   the translated box's clip. */
+.omx-gx-handle {
+  position: absolute;
+  top: 12px;
+  left: -30px;
+  width: 30px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--omx-surface);
+  border: 1px solid var(--omx-line-strong);
+  border-right: none;
+  border-radius: var(--omx-r) 0 0 var(--omx-r);
+  box-shadow: var(--omx-shadow-2);
+  color: var(--omx-text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--omx-fast) var(--omx-ease),
+              background var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-handle:hover { background: var(--omx-raised); color: var(--omx-accent); }
+
+.omx-gx-tabs {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--omx-line);
+}
+
+.omx-gx-tab {
+  padding: 5px 9px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--omx-r);
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint);
+  cursor: pointer;
+  transition: color var(--omx-fast) var(--omx-ease),
+              background var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-tab:hover { color: var(--omx-text); background: var(--omx-surface-2); }
+.omx-gx-tab[data-on='true'] {
+  color: var(--omx-accent-ink);
+  background: var(--omx-accent);
+  border-color: var(--omx-accent);
+}
+
+.omx-gx-panel {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 14px 20px;
+}
+
+/* ==========================================================================
+   Panel internals — shared vocabulary across all nine panels
+   ========================================================================== */
+.omx-gx-sec { padding: 12px 0; border-bottom: 1px solid var(--omx-line); }
+.omx-gx-sec:last-child { border-bottom: none; }
+
+.omx-gx-h {
+  margin: 0 0 8px;
+  font-size: var(--omx-t-sm);
+  font-weight: 550;
+  letter-spacing: 0.01em;
+  color: var(--omx-text);
+}
+
+.omx-gx-metaline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.omx-gx-metaline .omx-gx-h { margin: 0; }
+
+.omx-gx-sub {
+  margin: 0;
+  font-size: var(--omx-t-sm);
+  line-height: 1.5;
+  color: var(--omx-text-dim);
+}
+.omx-gx-sub.dim { color: var(--omx-text-faint); }
+
+.omx-gx-empty {
+  margin: 8px 0;
+  padding: 12px;
+  background: var(--omx-surface-2);
+  border: 1px dashed var(--omx-line);
+  border-radius: var(--omx-r);
+  font-size: var(--omx-t-sm);
+  line-height: 1.5;
+  color: var(--omx-text-faint);
+}
+
+.omx-gx-lbl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint);
+}
+
+.omx-gx-row { display: flex; align-items: flex-end; gap: 10px; margin-top: 10px; }
+.omx-gx-row > * { min-width: 0; }
+
+.omx-gx-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--omx-t-sm);
+  color: var(--omx-text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.omx-gx-check input { accent-color: var(--omx-accent); }
+
+.omx-gx-input {
+  width: 100%;
+  padding: 7px 9px;
+  background: var(--omx-ground);
+  border: 1px solid var(--omx-line-strong);
+  border-radius: var(--omx-r);
+  font-family: var(--omx-sans);
+  font-size: var(--omx-t-sm);
+  color: var(--omx-text);
+  transition: border-color var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-input:focus {
+  outline: none;
+  border-color: var(--omx-accent);
+  box-shadow: 0 0 0 3px rgba(var(--omx-accent-rgb), 0.16);
+}
+.omx-gx-input::placeholder { color: var(--omx-text-faint); }
+.omx-gx-input.wide { width: 100%; }
+select.omx-gx-input { cursor: pointer; }
+
+.omx-gx-chips { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+
+.omx-gx-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.omx-gx-list li + li { margin-top: 3px; }
+
+/* Every list row across every panel is this button: a name, a dim second line,
+   and a hover state that pairs with the map highlight. */
+.omx-gx-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--omx-r);
+  font-family: var(--omx-sans);
+  font-size: var(--omx-t-sm);
+  color: var(--omx-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--omx-fast) var(--omx-ease),
+              border-color var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-item:hover,
+.omx-gx-item[data-hover='true'] {
+  background: var(--omx-surface-2);
+  border-color: var(--omx-line);
+}
+.omx-gx-item strong { font-weight: 500; }
+.omx-gx-item .omx-gx-sub { font-size: var(--omx-t-xs); }
+.omx-gx-item[data-on='true'] {
+  background: var(--omx-select);
+  border-color: var(--omx-accent-dim);
+}
+
+.omx-gx-card {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--omx-surface-2);
+  border: 1px solid var(--omx-line);
+  border-radius: var(--omx-r);
+}
+.omx-gx-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--omx-t-sm);
+  font-weight: 550;
+}
+.omx-gx-card-meta {
+  margin-top: 4px;
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.04em;
+  color: var(--omx-text-faint);
+}
+
+.omx-gx-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+.omx-gx-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.omx-gx-fact {
+  padding: 8px 10px;
+  background: var(--omx-surface-2);
+  border: 1px solid var(--omx-line);
+  border-radius: var(--omx-r);
+}
+.omx-gx-fact .omx-gx-lbl { margin-bottom: 3px; }
+
+.omx-gx-tag,
+.omx-gx-count,
+.omx-gx-dist,
+.omx-gx-rate,
+.omx-gx-sig,
+.omx-gx-prov,
+.omx-gx-fresh {
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.04em;
+  color: var(--omx-text-faint);
+  white-space: nowrap;
+}
+
+.omx-gx-tag {
+  padding: 2px 6px;
+  background: var(--omx-surface-2);
+  border: 1px solid var(--omx-line);
+  border-radius: 999px;
+}
+
+.omx-gx-fresh[data-tone='live'] { color: var(--omx-pos); }
+.omx-gx-fresh[data-tone='cached'] { color: var(--omx-text-dim); }
+.omx-gx-fresh[data-tone='stale'] { color: var(--omx-warn); }
+.omx-gx-fresh[data-tone='offline'] { color: var(--omx-neg); }
+
+.omx-gx-warn {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--omx-warn) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--omx-warn) 32%, transparent);
+  border-radius: var(--omx-r);
+  font-size: var(--omx-t-sm);
+  color: var(--omx-text-dim);
+}
+
+.omx-gx-why {
+  margin-top: 6px;
+  font-size: var(--omx-t-xs);
+  line-height: 1.5;
+  color: var(--omx-text-faint);
+}
+
+.omx-gx-open { color: var(--omx-pos); }
+.omx-gx-shut { color: var(--omx-neg); }
+
+/* The working pulse. Deliberately not a spinner: it marks a request that is
+   in flight beside the thing it will update, not a whole-panel blocker. */
+.omx-gx-pulse {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--omx-accent);
+  animation: omx-gx-pulse 1.1s var(--omx-ease) infinite;
+}
+@keyframes omx-gx-pulse {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50%      { opacity: 1;    transform: scale(1.15); }
+}
+
+/* ==========================================================================
+   Layers panel
+   ========================================================================== */
+.omx-gx-layers { display: flex; flex-direction: column; gap: 2px; }
+
+.omx-gx-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--omx-r);
+  cursor: pointer;
+  transition: background var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-toggle:hover { background: var(--omx-surface-2); }
+.omx-gx-toggle-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.omx-gx-toggle-text strong { font-size: var(--omx-t-sm); font-weight: 500; }
+.omx-gx-toggle-text .omx-gx-sub { font-size: var(--omx-t-xs); }
+
+/* A real switch, because a bare checkbox in a dark panel reads as a rendering
+   fault rather than a control. */
+.omx-gx-switch { position: relative; flex: none; width: 28px; height: 16px; margin-top: 2px; }
+.omx-gx-switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.omx-gx-switch::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--omx-surface-2);
+  border: 1px solid var(--omx-line-strong);
+  border-radius: 999px;
+  transition: background var(--omx-fast) var(--omx-ease),
+              border-color var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  background: var(--omx-text-faint);
+  border-radius: 50%;
+  transition: transform var(--omx-fast) var(--omx-ease),
+              background var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-switch:has(input:checked)::before {
+  background: var(--omx-accent);
+  border-color: var(--omx-accent);
+}
+.omx-gx-switch:has(input:checked)::after {
+  transform: translateX(12px);
+  background: var(--omx-accent-ink);
+}
+.omx-gx-switch:has(input:focus-visible)::before {
+  box-shadow: 0 0 0 3px rgba(var(--omx-accent-rgb), 0.2);
+}
+
+/* ==========================================================================
+   Charts — elevation, temperature, rainfall
+   ========================================================================== */
+.omx-gx-mini, .omx-gx-elev { margin-top: 8px; }
+.omx-gx-elev-line, .omx-gx-templine { fill: none; stroke: var(--omx-accent); stroke-width: 1.5; }
+.omx-gx-elev-area { fill: rgba(var(--omx-accent-rgb), 0.14); }
+.omx-gx-tempdot { fill: var(--omx-accent); }
+.omx-gx-axis {
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  fill: var(--omx-text-faint);
+}
+.omx-gx-rainbar { fill: var(--omx-info); }
+.omx-gx-strip-chart { display: block; width: 100%; }
+.omx-gx-strip-read {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  color: var(--omx-text-faint);
+}
+
+.omx-gx-now { display: flex; align-items: center; gap: 12px; }
+.omx-gx-now-icon { font-size: 26px; line-height: 1; }
+.omx-gx-now-temp { font-size: var(--omx-t-xl); font-weight: 550; }
+
+/* Gauges — AQI, UV and anything else scored on a band. */
+.omx-gx-gauge { margin-top: 10px; }
+.omx-gx-gauge-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.omx-gx-gauge-label {
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint);
+}
+.omx-gx-gauge-value { font-size: var(--omx-t-md); font-weight: 550; }
+.omx-gx-gauge-track {
+  height: 5px;
+  background: var(--omx-surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.omx-gx-gauge-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--omx-accent);
+  transition: width var(--omx-slow) var(--omx-ease);
+}
+
+.omx-gx-range { width: 100%; accent-color: var(--omx-accent); }
+
+/* ==========================================================================
+   Routes
+   ========================================================================== */
+.omx-gx-route { margin-top: 6px; }
+.omx-gx-steps { list-style: none; margin: 8px 0 0; padding: 0; }
+.omx-gx-steps li {
+  display: flex;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--omx-r);
+  font-size: var(--omx-t-sm);
+  color: var(--omx-text-dim);
+  cursor: default;
+}
+.omx-gx-steps li:hover { background: var(--omx-surface-2); color: var(--omx-text); }
+
+.omx-gx-evt {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: var(--omx-t-sm);
+  color: var(--omx-text-dim);
+  border-bottom: 1px solid var(--omx-line);
+}
+.omx-gx-evt:last-child { border-bottom: none; }
+
+/* ==========================================================================
+   Highlights — the landing panel
+   ==========================================================================
+   This is the first thing a user sees, so it carries the greeting and the live
+   feed. It is the only panel that is a full-height column rather than a stack
+   of sections: the feed scrolls under a header that does not. */
+.omx-gx-hi { display: flex; flex-direction: column; gap: 12px; }
+
+.omx-gx-greet { padding: 12px 0 4px; }
+.omx-gx-greet-hello {
+  margin: 0;
+  font-size: var(--omx-t-xl);
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  color: var(--omx-text);
+}
+.omx-gx-greet-sub {
+  margin: 5px 0 0;
+  font-size: var(--omx-t-sm);
+  line-height: 1.55;
+  color: var(--omx-text-dim);
+}
+.omx-gx-greet-date {
+  margin-top: 8px;
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint);
+}
+
+/* The live badge. The dot animates only while the feed is genuinely fresh —
+   an indicator that pulses regardless of state is the failure this product
+   exists to prevent. */
+.omx-gx-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--omx-text-faint);
+}
+.omx-gx-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--omx-text-faint);
+}
+.omx-gx-live[data-live='true'] { color: var(--omx-pos); }
+.omx-gx-live[data-live='true'] i {
+  background: var(--omx-pos);
+  animation: omx-gx-blink 2s var(--omx-ease) infinite;
+}
+@keyframes omx-gx-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--omx-pos) 55%, transparent); }
+  70%      { opacity: 0.7; box-shadow: 0 0 0 5px transparent; }
+}
+
+.omx-gx-hi-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--omx-line);
+}
+
+.omx-gx-hi-list { display: flex; flex-direction: column; gap: 4px; }
+
+/* One story. The severity rail on the leading edge is the only colour in the
+   row, so the eye ranks the feed before reading any of it. */
+.omx-gx-story {
+  position: relative;
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 10px 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--omx-r);
+  font-family: var(--omx-sans);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--omx-fast) var(--omx-ease),
+              border-color var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-story::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--omx-sev, var(--omx-line-strong));
+}
+.omx-gx-story:hover,
+.omx-gx-story[data-hover='true'] {
+  background: var(--omx-surface-2);
+  border-color: var(--omx-line);
+}
+.omx-gx-story[data-on='true'] {
+  background: var(--omx-select);
+  border-color: var(--omx-accent-dim);
+}
+
+.omx-gx-story-rank {
+  flex: none;
+  width: 22px;
+  padding-top: 1px;
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  color: var(--omx-text-faint);
+  text-align: right;
+}
+
+.omx-gx-story-body { flex: 1; min-width: 0; }
+
+.omx-gx-story-title {
+  font-size: var(--omx-t-sm);
+  line-height: 1.45;
+  color: var(--omx-text);
+  /* Three lines, then ellipsis: headlines vary from six words to forty, and an
+     unclamped feed makes one story visually outrank another for no reason. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.omx-gx-story-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 6px;
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  letter-spacing: 0.04em;
+  color: var(--omx-text-faint);
+}
+.omx-gx-story-meta .sev { color: var(--omx-sev, var(--omx-text-faint)); }
+
+.omx-gx-flag {
+  padding: 1px 5px;
+  background: var(--omx-surface-2);
+  border: 1px solid var(--omx-line);
+  border-radius: 3px;
+  color: var(--omx-text-dim);
+}
+
+.omx-gx-story-detail {
+  margin: 2px 0 6px 32px;
+  padding: 10px 12px;
+  background: var(--omx-surface-2);
+  border: 1px solid var(--omx-line);
+  border-radius: var(--omx-r);
+  animation: omx-gx-fade var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-story-detail .omx-gx-sub { font-size: var(--omx-t-xs); }
+.omx-gx-story-detail a {
+  color: var(--omx-accent);
+  font-size: var(--omx-t-xs);
+  text-decoration: none;
+}
+.omx-gx-story-detail a:hover { text-decoration: underline; }
+
+.omx-gx-srcs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   Location — the briefing for one point
+   ==========================================================================
+   The panel answers "what is going on here", so it is laid out as a briefing
+   reads: what this place is, how loud it is, how risky it is, then the stories
+   and the articles behind them. Two scopes run through it — articles that name
+   the place and articles about its country — and the one thing the styling
+   must never do is blur that line, hence `.omx-gx-here` and the leading rail
+   on a local row. */
+.omx-gx-place { display: flex; flex-direction: column; }
+
+.omx-gx-place-head { padding: 12px 0; border-bottom: 1px solid var(--omx-line); }
+.omx-gx-place-name {
+  margin: 0;
+  font-size: var(--omx-t-lg);
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  color: var(--omx-text);
+}
+.omx-gx-place-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+/* Risk, per dimension. A bar rather than a number because the dimensions are
+   only comparable to each other — an absolute 9.2 means nothing on its own. */
+.omx-gx-riskbars { display: flex; flex-direction: column; gap: 5px; margin: 8px 0; }
+.omx-gx-riskbar {
+  display: grid;
+  grid-template-columns: 68px 1fr 30px;
+  align-items: center;
+  gap: 8px;
+}
+.omx-gx-riskbar .omx-gx-lbl { margin: 0; }
+.omx-gx-riskbar .track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--omx-surface-2);
+  overflow: hidden;
+}
+.omx-gx-riskbar .track i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  transition: width var(--omx-base) var(--omx-ease);
+}
+.omx-gx-riskbar .v {
+  font-family: var(--omx-mono);
+  font-size: var(--omx-t-xs);
+  color: var(--omx-text-dim);
+  text-align: right;
+}
+
+/* The article list. Titles are links out to the publisher, so they get the
+   only underline in the panel — everything else here is a button. */
+.omx-gx-newslist { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+
+.omx-gx-newsrow {
+  position: relative;
+  padding: 9px 8px 9px 12px;
+  border-radius: var(--omx-r);
+  border: 1px solid transparent;
+  transition: background var(--omx-fast) var(--omx-ease);
+}
+.omx-gx-newsrow:hover { background: var(--omx-surface-2); border-color: var(--omx-line); }
+/* A local row carries an accent rail; a country row does not. This is the
+   whole visual difference between "here" and "this country", and it is
+   deliberately the same device the severity rail uses on a story row. */
+.omx-gx-newsrow[data-scope='local']::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--omx-accent);
+}
+.omx-gx-newstitle {
+  display: block;
+  font-size: var(--omx-t-sm);
+  line-height: 1.45;
+  color: var(--omx-text);
+  text-decoration: none;
+}
+.omx-gx-newstitle:hover { color: var(--omx-accent); text-decoration: underline; }
+.omx-gx-newsrow .omx-gx-story-meta { margin-top: 5px; }
+.omx-gx-newssum {
+  margin: 6px 0 0;
+  font-size: var(--omx-t-xs);
+  line-height: 1.5;
+  color: var(--omx-text-faint);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* "names Hyderabad" — why this row is in front of you. */
+.omx-gx-here {
+  color: var(--omx-accent);
+  font-family: var(--omx-mono);
+  letter-spacing: 0.04em;
+}
+
+/* ==========================================================================
+   Map markers for highlights
+   ==========================================================================
+   Drawn as DOM markers rather than a MapLibre layer because they carry a count
+   badge and a hover target, and a symbol layer cannot do either without a
+   sprite sheet built at load. There are at most a few dozen. */
+.omx-gx-pin {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--omx-sev, var(--omx-accent));
+  border: 1.5px solid var(--omx-ground);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--omx-sev, var(--omx-accent)) 45%, transparent),
+              var(--omx-shadow-2);
+  font-family: var(--omx-mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: #0a0a0a;
+  cursor: pointer;
+  transition: transform var(--omx-fast) var(--omx-spring);
+}
+.omx-gx-pin:hover,
+.omx-gx-pin[data-hover='true'] { transform: scale(1.35); z-index: 2; }
+
+/* ==========================================================================
+   Narrow windows
+   ========================================================================== */
+@media (max-width: 900px) {
+  .omx-gx-side { width: 100%; max-width: none; }
+  .omx-gx-overlay { max-width: calc(100% - 24px); }
+  .omx-gx-country { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omx-gx-side,
+  .omx-gx-pin,
+  .omx-gx-riskbar .track i,
+  .omx-gx-gauge-fill { transition: none; }
+  .omx-gx-pulse,
+  .omx-gx-live i,
+  .omx-gx-notice,
+  .omx-gx-country,
+  .omx-gx-story-detail { animation: none; }
+}
