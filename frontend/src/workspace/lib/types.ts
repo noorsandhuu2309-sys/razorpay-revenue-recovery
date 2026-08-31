@@ -369,6 +369,7 @@ export type ViewId =
   | 'outputs'
   | 'intents'
   | 'agents'
+  | 'recovery'
   // TERRA — restored in full, see WORKSPACE.md
   | 'map'
   | 'news'

@@ -33,6 +33,7 @@ import { BriefView, ClaimsView, SourcesView, TableView, TimelineView } from './v
 import { OutputsView } from './views/Outputs'
 import { IntentsView } from './views/Intents'
 import { AgentsView } from './views/Agents'
+import { RecoveryView } from './views/Recovery'
 import { AnalysisView, NewsView, RelationshipsView } from './views/TerraViews'
 import { AskView, IntelView, SituationView, TerraAgentsView } from './views/TerraIntel'
 import { SettingsView } from './views/Settings'
@@ -577,6 +578,7 @@ function Shell() {
         {view === 'outputs' && <OutputsView />}
         {view === 'intents' && <IntentsView />}
         {view === 'agents' && <AgentsView />}
+        {view === 'recovery' && <RecoveryView />}
         {view === 'news' && <NewsView />}
         {view === 'relationships' && <RelationshipsView />}
         {view === 'analysis' && <AnalysisView />}

@@ -25,7 +25,7 @@ import type { ReactNode } from 'react'
 import type { ViewId } from './types'
 import {
   IconAgents, IconAnalysis, IconAsk, IconBrief, IconChallenge, IconClaims,
-  IconCompare, IconGraph, IconHome, IconIntel, IconIntents, IconMap, IconNews,
+  IconCompare, IconGraph, IconRecovery, IconHome, IconIntel, IconIntents, IconMap, IconNews,
   IconOutputs, IconRelationships, IconRuns, IconSettings, IconSituation,
   IconSources, IconQuery, IconTable, IconTimeline, IconHelix,
 } from '../components/Icons'
@@ -90,7 +90,9 @@ export const VIEWS: ViewDef[] = [
       { inspector: false, trustLens: false, actionBar: false }),
   def('agents', 'Agents', IconAgents, 'Work', 'Runs, progress, cost and controls',
       { inspector: false, trustLens: false, actionBar: false }),
-
+    def('recovery', 'Revenue Recovery', IconRecovery, 'Work',
+      'Recover eligible failed payments safely',
+      { inspector: false, trustLens: false, actionBar: false }),
   // -- TERRA ----------------------------------------------------------------
   // The map still selects real workspace objects, but it now carries the whole
   // geospatial subsystem in its own sidebar — layers, search, routes,

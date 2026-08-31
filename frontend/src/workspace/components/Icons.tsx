@@ -127,6 +127,15 @@ export const IconIntents = (p: IconProps) => (
 export const IconAgents = (p: IconProps) => (
   <Svg {...p}><rect x="4" y="7" width="16" height="12" rx="2.4" /><path d="M12 7V3.8" /><circle cx="12" cy="2.8" r="1.2" /><path d="M8.5 12.5v2" /><path d="M15.5 12.5v2" /><path d="M2 12v3" /><path d="M22 12v3" /></Svg>
 )
+/** Revenue Recovery: failed payments moving toward recovery. */
+export const IconRecovery = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 8.5h10.5" />
+    <path d="m12.5 5.5 3 3-3 3" />
+    <path d="M19 15.5H8.5" />
+    <path d="m11.5 12.5-3 3 3 3" />
+  </Svg>
+)
 
 // -- TERRA ------------------------------------------------------------------
 /** World Map: the flat projection TERRA actually draws. */
