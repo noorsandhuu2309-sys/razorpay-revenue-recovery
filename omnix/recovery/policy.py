@@ -15,9 +15,19 @@ class PolicyDecision:
     rules_checked: List[str]
 
 
+# ---------------------------------------------------------
 # Safety limits for automated recovery.
-MAX_RETRY_COUNT = 0
+# ---------------------------------------------------------
+
+# A transaction may have at most 2 previous retry attempts.
+# Therefore:
+#   retry_count = 0 -> first automated retry allowed
+#   retry_count = 1 -> one additional automated retry allowed
+#   retry_count = 2 -> blocked
+MAX_RETRY_COUNT = 2
+
 MAX_AUTOMATIC_AMOUNT = 50000.00
+
 MIN_CONFIDENCE = 0.80
 
 
@@ -35,7 +45,9 @@ def evaluate_policy(
 
     rules_checked: List[str] = []
 
+    # ---------------------------------------------------------
     # Rule 1: evidence must be verified.
+    # ---------------------------------------------------------
     rules_checked.append("evidence_verified")
 
     if evidence.verdict != "verified":
@@ -47,7 +59,9 @@ def evaluate_policy(
             rules_checked=rules_checked,
         )
 
-    # Rule 2: confidence must meet the minimum threshold.
+    # ---------------------------------------------------------
+    # Rule 2: evidence confidence must meet threshold.
+    # ---------------------------------------------------------
     rules_checked.append("confidence_threshold")
 
     if evidence.confidence < MIN_CONFIDENCE:
@@ -62,19 +76,27 @@ def evaluate_policy(
             rules_checked=rules_checked,
         )
 
-    # Rule 3: transaction must not already have been retried.
+    # ---------------------------------------------------------
+    # Rule 3: enforce retry limit.
+    # ---------------------------------------------------------
     rules_checked.append("retry_limit")
 
-    if opportunity.retry_count > MAX_RETRY_COUNT:
+    if opportunity.retry_count >= MAX_RETRY_COUNT:
         return PolicyDecision(
             transaction_id=opportunity.transaction_id,
             allowed=False,
             action="manual_review",
-            reason="Automatic retry limit has already been reached",
+            reason=(
+                f"Retry count {opportunity.retry_count} "
+                f"has reached the automatic retry limit "
+                f"of {MAX_RETRY_COUNT}"
+            ),
             rules_checked=rules_checked,
         )
 
+    # ---------------------------------------------------------
     # Rule 4: only retry recommendations can be automated.
+    # ---------------------------------------------------------
     rules_checked.append("allowed_action")
 
     if diagnosis.recommended_action != "retry_payment":
@@ -86,7 +108,9 @@ def evaluate_policy(
             rules_checked=rules_checked,
         )
 
+    # ---------------------------------------------------------
     # Rule 5: protect high-value transactions.
+    # ---------------------------------------------------------
     rules_checked.append("amount_limit")
 
     if opportunity.amount > MAX_AUTOMATIC_AMOUNT:
@@ -96,12 +120,15 @@ def evaluate_policy(
             action="manual_review",
             reason=(
                 f"Transaction amount ₹{opportunity.amount:.2f} "
-                f"exceeds automatic limit ₹{MAX_AUTOMATIC_AMOUNT:.2f}"
+                f"exceeds automatic limit "
+                f"₹{MAX_AUTOMATIC_AMOUNT:.2f}"
             ),
             rules_checked=rules_checked,
         )
 
+    # ---------------------------------------------------------
     # All safety rules passed.
+    # ---------------------------------------------------------
     return PolicyDecision(
         transaction_id=opportunity.transaction_id,
         allowed=True,
@@ -116,6 +143,10 @@ def evaluate_policies(
     diagnoses: List[Diagnosis],
     evidence_results: List[EvidenceResult],
 ) -> List[PolicyDecision]:
+    """
+    Evaluate multiple recovery opportunities against their
+    diagnoses and evidence results.
+    """
 
     diagnoses_by_id = {
         diagnosis.transaction_id: diagnosis
@@ -130,8 +161,13 @@ def evaluate_policies(
     decisions: List[PolicyDecision] = []
 
     for opportunity in opportunities:
-        diagnosis = diagnoses_by_id.get(opportunity.transaction_id)
-        evidence = evidence_by_id.get(opportunity.transaction_id)
+        diagnosis = diagnoses_by_id.get(
+            opportunity.transaction_id
+        )
+
+        evidence = evidence_by_id.get(
+            opportunity.transaction_id
+        )
 
         if diagnosis is None or evidence is None:
             continue

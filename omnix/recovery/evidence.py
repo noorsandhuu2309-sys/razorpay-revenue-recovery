@@ -14,6 +14,10 @@ class EvidenceResult:
     evidence: List[str]
 
 
+# Maximum number of retries that evidence can support.
+MAX_EVIDENCE_RETRIES = 2
+
+
 def verify_diagnosis(
     opportunity: RecoveryOpportunity,
     diagnosis: Diagnosis,
@@ -29,12 +33,26 @@ def verify_diagnosis(
     checks_passed = 0
     checks_total = 0
 
+    diagnosis_lower = diagnosis.diagnosis.lower()
+
+    # ---------------------------------------------------------
     # Check 1: diagnosis matches the actual failure type.
+    # ---------------------------------------------------------
     checks_total += 1
+
+    transient_terms = {
+        "temporary",
+        "transient",
+        "retryable",
+        "retry",
+    }
 
     if (
         opportunity.failure_type.value == "transient"
-        and "temporary" in diagnosis.diagnosis.lower()
+        and any(
+            term in diagnosis_lower
+            for term in transient_terms
+        )
     ):
         checks_passed += 1
         evidence.append(
@@ -45,7 +63,9 @@ def verify_diagnosis(
             "Failure type does not fully support the diagnosis"
         )
 
+    # ---------------------------------------------------------
     # Check 2: failure code is consistent with the diagnosis.
+    # ---------------------------------------------------------
     checks_total += 1
 
     timeout_codes = {
@@ -56,8 +76,6 @@ def verify_diagnosis(
     network_codes = {
         "network_error",
     }
-
-    diagnosis_lower = diagnosis.diagnosis.lower()
 
     code_supported = (
         opportunity.failure_code in timeout_codes
@@ -79,20 +97,36 @@ def verify_diagnosis(
             "does not fully support the diagnosis"
         )
 
-    # Check 3: no previous retry.
+    # ---------------------------------------------------------
+    # Check 3: retry count is within the safe evidence limit.
+    # ---------------------------------------------------------
     checks_total += 1
 
-    if opportunity.retry_count == 0:
+    if (
+        opportunity.retry_count
+        < MAX_EVIDENCE_RETRIES
+    ):
         checks_passed += 1
         evidence.append(
-            "No previous retry has been attempted"
+            f"Retry count ({opportunity.retry_count}) "
+            f"is within the safe limit of "
+            f"{MAX_EVIDENCE_RETRIES}"
         )
     else:
         evidence.append(
-            "A previous retry has already been attempted"
+            f"Retry count ({opportunity.retry_count}) "
+            f"has reached the safe limit of "
+            f"{MAX_EVIDENCE_RETRIES}"
         )
 
-    verification_score = checks_passed / checks_total
+    # ---------------------------------------------------------
+    # Calculate deterministic verification score.
+    # ---------------------------------------------------------
+    verification_score = (
+        checks_passed / checks_total
+        if checks_total > 0
+        else 0.0
+    )
 
     if verification_score == 1.0:
         verdict = "verified"
@@ -101,8 +135,9 @@ def verify_diagnosis(
     else:
         verdict = "unsupported"
 
-    # Confidence is derived from deterministic verification,
-    # not from the diagnosis model's self-reported confidence.
+    # IMPORTANT:
+    # The model's confidence is NOT trusted by itself.
+    # It is multiplied by deterministic evidence support.
     confidence = round(
         verification_score * diagnosis.confidence,
         2,
@@ -121,7 +156,12 @@ def verify_opportunities(
     opportunities: List[RecoveryOpportunity],
     diagnoses: List[Diagnosis],
 ) -> List[EvidenceResult]:
-    results = []
+    """
+    Verify a collection of recovery opportunities against
+    their corresponding diagnoses.
+    """
+
+    results: List[EvidenceResult] = []
 
     diagnosis_by_transaction = {
         diagnosis.transaction_id: diagnosis
