@@ -255,7 +255,7 @@ export function AgentsView() {
               produced. Pause, Redirect and Cancel are cooperative — the worker
               acts on them at its next checkpoint, which is why the buttons say
               “pausing” rather than claiming it already stopped."
-        how="Nothing to set up. Ask OMNIX to research something, or run a
+        how="Nothing to set up. Ask REVORA to research something, or run a
              CHALLENGE, and the worker appears here while it runs. Click one to
              open its audit trail."
       />
@@ -271,7 +271,7 @@ export function AgentsView() {
           <div className="glyph"><IconAgents size={34} /></div>
           <h3>No agent runs in this Space</h3>
           <p>
-            Ask OMNIX to research something, or select objects and press
+            Ask REVORA to research something, or select objects and press
             Research. Agents appear here while they work — with their current
             step, model, measured cost, and controls to pause, redirect or
             cancel them.

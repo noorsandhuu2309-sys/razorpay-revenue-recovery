@@ -30,6 +30,9 @@ MAX_AUTOMATIC_AMOUNT = 50000.00
 
 MIN_CONFIDENCE = 0.80
 
+MIN_AUTOMATIC_AMOUNT = 100.00
+
+
 
 def evaluate_policy(
     opportunity: RecoveryOpportunity,
@@ -107,10 +110,28 @@ def evaluate_policy(
             reason="Recommended action is not approved for automation",
             rules_checked=rules_checked,
         )
+    # ---------------------------------------------------------
+    # Rule 5: enforce economic floor.
+    # ---------------------------------------------------------
+    rules_checked.append("economic_floor")
+
+    if opportunity.amount < MIN_AUTOMATIC_AMOUNT:
+        return PolicyDecision(
+            transaction_id=opportunity.transaction_id,
+            allowed=False,
+            action="manual_review",
+            reason=(
+                f"Transaction amount ₹{opportunity.amount:.2f} "
+                f"is below the automatic recovery floor "
+                f"of ₹{MIN_AUTOMATIC_AMOUNT:.2f}"
+            ),
+            rules_checked=rules_checked,
+        )
 
     # ---------------------------------------------------------
-    # Rule 5: protect high-value transactions.
+    # Rule 6: protect high-value transactions.
     # ---------------------------------------------------------
+  
     rules_checked.append("amount_limit")
 
     if opportunity.amount > MAX_AUTOMATIC_AMOUNT:

@@ -1,6 +1,6 @@
 """Build the HELIX corpus from PubMed, via NCBI E-utilities.
 
-Run:  python -m omnix.helix.ingest            (incremental — keeps what it has)
+Run:  python -m omni.helix.ingest            (incremental — keeps what it has)
       python -m omnix.helix.ingest --rebuild  (start from empty)
 
 WHY E-UTILITIES DIRECTLY

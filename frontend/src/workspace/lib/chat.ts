@@ -32,7 +32,7 @@ export type Role = 'user' | 'assistant'
  *  and being able to see WHICH it picked (the `agent` on the reply) is more
  *  useful than choosing up front. */
 export const AGENTS = [
-  { id: 'auto', label: 'Auto', hint: 'OMNIX picks the right model for the question' },
+  { id: 'auto', label: 'Auto', hint: 'REVORA picks the right model for the question' },
   { id: 'chat', label: 'General', hint: 'Conversation, writing, explanation' },
   { id: 'reasoning', label: 'Reasoning', hint: 'Step-by-step analysis and maths' },
   { id: 'coding', label: 'Code', hint: 'Writing, reviewing and debugging code' },

@@ -96,7 +96,7 @@ function ModelsSection() {
                ? `${onCount} of ${roster.models.length} on · open weights on NVIDIA NIM`
                : 'loading…'}>
       <Row label="Auto routing"
-           hint="OMNIX reads each question and picks the model for it — code and maths to the reasoning model, images to vision, research to the 120B. Turn this off to always use whatever is chosen in the chat composer.">
+           hint="REVORA reads each question and picks the model for it — code and maths to the reasoning model, images to vision, research to the 120B. Turn this off to always use whatever is chosen in the chat composer.">
         <div className="omx-set-inline">
           <Toggle on={roster.auto} onChange={(v) => void setAuto(v)}
                   label="Automatic model routing" />
@@ -295,7 +295,7 @@ export function SettingsView() {
               </div>
             </div>
 
-            <Row label="Display name" hint="What OMNIX calls you throughout the app">
+            <Row label="Display name" hint="What REVORA calls you throughout the app">
               <div className="omx-set-inline">
                 <input
                   className="omx-set-input"
@@ -451,7 +451,7 @@ export function SettingsView() {
           ))}
         </div>
         <p className="omx-set-fine">
-          OMNIX runs on 127.0.0.1 with no TLS. Passwords are stretched with
+          REVORA runs on 127.0.0.1 with no TLS. Passwords are stretched with
           scrypt and stored only as hashes; session tokens are stored only as
           digests. Nothing here is sent anywhere except to the model providers
           you have configured keys for.

@@ -23,78 +23,64 @@ def verify_diagnosis(
     diagnosis: Diagnosis,
 ) -> EvidenceResult:
     """
-    Deterministically verify whether the diagnosis is supported
-    by the transaction evidence.
+    Deterministically verify whether the recommended recovery action
+    is supported by the actual transaction evidence.
 
-    The model/diagnosis does not get to verify itself.
+    The AI diagnosis is advisory only. Transaction fields are the
+    source of truth for authorization.
     """
 
     evidence: List[str] = []
     checks_passed = 0
     checks_total = 0
 
-    diagnosis_lower = diagnosis.diagnosis.lower()
-
     # ---------------------------------------------------------
-    # Check 1: diagnosis matches the actual failure type.
+    # Check 1: failure type supports the diagnosis/action.
     # ---------------------------------------------------------
     checks_total += 1
 
-    transient_terms = {
-        "temporary",
-        "transient",
-        "retryable",
-        "retry",
-    }
-
     if (
         opportunity.failure_type.value == "transient"
-        and any(
-            term in diagnosis_lower
-            for term in transient_terms
-        )
+        and diagnosis.recommended_action == "retry_payment"
     ):
         checks_passed += 1
         evidence.append(
             "Failure type confirms a transient payment failure"
         )
+    elif opportunity.failure_type.value == "permanent":
+        evidence.append(
+            "Permanent failure does not support automatic retry"
+        )
     else:
         evidence.append(
-            "Failure type does not fully support the diagnosis"
+            "Failure type does not support automatic retry"
         )
 
     # ---------------------------------------------------------
-    # Check 2: failure code is consistent with the diagnosis.
+    # Check 2: failure code is a known retryable transient code.
     # ---------------------------------------------------------
     checks_total += 1
 
-    timeout_codes = {
+    retryable_codes = {
         "issuer_timeout",
         "timeout",
-    }
-
-    network_codes = {
         "network_error",
     }
 
-    code_supported = (
-        opportunity.failure_code in timeout_codes
-        and "timeout" in diagnosis_lower
-    ) or (
-        opportunity.failure_code in network_codes
-        and "network" in diagnosis_lower
-    )
-
-    if code_supported:
+    if (
+        opportunity.failure_type.value == "transient"
+        and opportunity.failure_code in retryable_codes
+        and diagnosis.recommended_action == "retry_payment"
+    ):
         checks_passed += 1
         evidence.append(
             f"Failure code '{opportunity.failure_code}' "
-            "supports the diagnosis"
+            "supports retry"
         )
     else:
         evidence.append(
             f"Failure code '{opportunity.failure_code}' "
-            "does not fully support the diagnosis"
+            "does not support automatic retry"
         )
 
     # ---------------------------------------------------------
@@ -102,10 +88,7 @@ def verify_diagnosis(
     # ---------------------------------------------------------
     checks_total += 1
 
-    if (
-        opportunity.retry_count
-        < MAX_EVIDENCE_RETRIES
-    ):
+    if opportunity.retry_count < MAX_EVIDENCE_RETRIES:
         checks_passed += 1
         evidence.append(
             f"Retry count ({opportunity.retry_count}) "
@@ -135,9 +118,7 @@ def verify_diagnosis(
     else:
         verdict = "unsupported"
 
-    # IMPORTANT:
-    # The model's confidence is NOT trusted by itself.
-    # It is multiplied by deterministic evidence support.
+    # AI confidence is weighted by deterministic evidence support.
     confidence = round(
         verification_score * diagnosis.confidence,
         2,

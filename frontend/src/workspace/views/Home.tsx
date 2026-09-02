@@ -562,7 +562,7 @@ export function HomeView() {
               <div className="glyph"><IconAsk size={30} /></div>
               <h2>What are you working on?</h2>
               <p>
-                Ask anything. OMNIX routes each question to the model that suits
+                Ask anything. REVORA routes each question to the model that suits
                 it — reasoning, code, or a research agent that searches the web
                 and shows you what it read.
               </p>

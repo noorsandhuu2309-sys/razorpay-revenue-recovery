@@ -1,5 +1,4 @@
-import { useMemo, useState } from 'react'
-
+import { useEffect, useMemo, useRef, useState } from 'react'
 type Status = 'Recovered' | 'Manual review' | 'Blocked'
 
 interface RecoveryRow {
@@ -13,86 +12,62 @@ interface RecoveryRow {
   status: Status
 }
 
-const BENCHMARK = {
-  totalPayments: 1000,
-  failedPayments: 252,
-  groundTruthRecoverable: 112,
-  baselineOpportunities: 81,
-  aiCandidates: 171,
-  aiApproved: 29,
-  aiTrueApprovals: 29,
-  aiFalseApprovals: 0,
-  baselineRevenue: 942953.17,
-  aiRevenue: 368643.46,
-  combinedRevenue: 1311596.63,
-  precision: 1.0,
-  recall: 0.7232,
-  f1: 0.8394,
-  recoveryRate: 0.7026,
+interface RecoveryBenchmark {
+  total_payments: number
+  failed_payments: number
+  ground_truth_recoverable: number
+  baseline_opportunities: number
+  ai_candidates: number
+  ai_approved: number
+  ai_successful_recoveries: number
+  false_approvals: number
+  revenue_at_risk: number
+  baseline_revenue: number
+  ai_revenue: number
+  combined_revenue: number
+  recovery_rate: number
+  status: string
+}
+interface RecoveryAuditRecord {
+  transaction_id: string
+  merchant_id: string
+  amount: number
+  payment_method: string
+  failure_code: string
+  failure_type: string
+  retry_count: number
+  recommended_action: string
+  evidence_verdict: string
+  evidence_confidence: number
+  allowed: boolean
+  policy_action: string
+  policy_reason: string
+  rules_checked: string[]
+  attempted: boolean
+  success: boolean
+  amount_recovered: number
+  execution_message: string
+  status: Status
+}
+interface RecoveryAIResult {
+  ai_candidates: number
+  ai_approved: number
+  ai_successful_recoveries: number
+  false_approvals: number
+  ai_revenue: number
+  status: string
+    audit_trail: RecoveryAuditRecord[]
+      total_payments: number
+  failed_payments: number
+  ground_truth_recoverable: number
+  baseline_opportunities: number
+  baseline_revenue: number
+  revenue_at_risk: number
+  combined_revenue: number
+  recovery_rate: number
 }
 
-const SAMPLE_RECOVERIES: RecoveryRow[] = [
-  {
-    id: 'txn_000037',
-    merchant: 'merchant_014',
-    amount: 8922.01,
-    method: 'wallet',
-    failure: 'issuer_timeout',
-    action: 'retry_payment',
-    confidence: 0.94,
-    status: 'Recovered',
-  },
-  {
-    id: 'txn_000024',
-    merchant: 'merchant_006',
-    amount: 11397.72,
-    method: 'netbanking',
-    failure: 'timeout',
-    action: 'retry_payment',
-    confidence: 0.95,
-    status: 'Recovered',
-  },
-  {
-    id: 'txn_000030',
-    merchant: 'merchant_011',
-    amount: 14721.34,
-    method: 'card',
-    failure: 'network_error',
-    action: 'retry_payment',
-    confidence: 0.95,
-    status: 'Recovered',
-  },
-  {
-    id: 'txn_000046',
-    merchant: 'merchant_003',
-    amount: 12684.61,
-    method: 'wallet',
-    failure: 'issuer_timeout',
-    action: 'retry_payment',
-    confidence: 0.95,
-    status: 'Recovered',
-  },
-  {
-    id: 'txn_000065',
-    merchant: 'merchant_009',
-    amount: 13005.98,
-    method: 'netbanking',
-    failure: 'timeout',
-    action: 'retry_payment',
-    confidence: 0.95,
-    status: 'Recovered',
-  },
-  {
-    id: 'txn_000111',
-    merchant: 'merchant_002',
-    amount: 8842.73,
-    method: 'card',
-    failure: 'timeout',
-    action: 'retry_payment',
-    confidence: 0.95,
-    status: 'Manual review',
-  },
-]
+
 
 function money(value: number): string {
   return `₹${value.toLocaleString('en-IN', {
@@ -118,7 +93,8 @@ function MetricCard({
   return (
     <div
       style={{
-        background: 'linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012))',
+        background:
+          'linear-gradient(145deg, rgba(255,255,255,.035), rgba(255,255,255,.012))',
         border: '1px solid rgba(255,255,255,.08)',
         borderRadius: 14,
         padding: '18px 20px',
@@ -268,12 +244,11 @@ function StatusPill({ status }: { status: Status }) {
           width: 5,
           height: 5,
           borderRadius: '50%',
-          background:
-            recovered
-              ? '#9bc9a5'
-              : blocked
-                ? '#d9b45a'
-                : '#777',
+          background: recovered
+            ? '#9bc9a5'
+            : blocked
+              ? '#d9b45a'
+              : '#777',
         }}
       />
       {status}
@@ -284,17 +259,150 @@ function StatusPill({ status }: { status: Status }) {
 export function RecoveryView() {
   const [filter, setFilter] = useState<'all' | 'recovered' | 'review'>('all')
 
-  const rows = useMemo(() => {
-    if (filter === 'recovered') {
-      return SAMPLE_RECOVERIES.filter((row) => row.status === 'Recovered')
-    }
+  const [benchmark, setBenchmark] = useState<RecoveryBenchmark | null>(null)
+  const [auditTrail, setAuditTrail] = useState<RecoveryAuditRecord[]>([])
+const [aiResult, setAiResult] = useState<RecoveryAIResult | null>(null)
+const [loading, setLoading] = useState(true)
+const [, setAiLoading] = useState(false)
+const [error, setError] = useState<string | null>(null)
+const aiRequestRef = useRef<Promise<RecoveryAIResult> | null>(null)
 
-    if (filter === 'review') {
-      return SAMPLE_RECOVERIES.filter((row) => row.status === 'Manual review')
-    }
 
-    return SAMPLE_RECOVERIES
-  }, [filter])
+useEffect(() => {
+  let cancelled = false
+
+
+  async function loadAIRecovery() {
+    try {
+      setAiLoading(true)
+
+      if (!aiRequestRef.current) {
+        aiRequestRef.current = fetch('/api/recovery/ai').then(
+          async (response) => {
+            if (!response.ok) {
+              throw new Error(
+                `AI recovery API returned ${response.status}`,
+              )
+            }
+
+            return (await response.json()) as RecoveryAIResult
+          },
+        )
+      }
+
+      const data = await aiRequestRef.current
+
+if (!cancelled) {
+  setAiResult(data)
+  setAuditTrail(data.audit_trail ?? [])
+
+  setBenchmark({
+    total_payments: data.total_payments,
+    failed_payments: data.failed_payments,
+    ground_truth_recoverable: data.ground_truth_recoverable,
+    baseline_opportunities: data.baseline_opportunities,
+    revenue_at_risk: data.revenue_at_risk,
+    baseline_revenue: data.baseline_revenue,
+    ai_revenue: data.ai_revenue,
+    combined_revenue: data.combined_revenue,
+    recovery_rate: data.recovery_rate,
+    ai_candidates: data.ai_candidates,
+    ai_approved: data.ai_approved,
+    ai_successful_recoveries: data.ai_successful_recoveries,
+    false_approvals: data.false_approvals,
+    status: data.status,
+  })
+}
+    } catch (err) {
+      if (!cancelled) {
+        console.error(
+          'AI recovery benchmark unavailable:',
+          err,
+        )
+      }
+    } finally {
+      if (!cancelled) {
+        setAiLoading(false)
+      }
+    }
+  }
+
+  
+  loadAIRecovery()
+
+  return () => {
+    cancelled = true
+  }
+}, [])
+
+const rows = useMemo<RecoveryRow[]>(() => {
+  const liveRows: RecoveryRow[] = auditTrail.map((record) => ({
+    id: record.transaction_id,
+    merchant: record.merchant_id,
+    amount: record.amount,
+    method: record.payment_method,
+    failure: record.failure_code,
+    action: record.policy_action,
+    confidence: record.evidence_confidence,
+    status: record.status,
+  }))
+
+  if (filter === 'recovered') {
+    return liveRows.filter((row) => row.status === 'Recovered')
+  }
+
+  if (filter === 'review') {
+    return liveRows.filter((row) => row.status === 'Manual review')
+  }
+
+  return liveRows
+}, [auditTrail, filter])
+
+const precision =
+  aiResult && aiResult.ai_approved > 0
+    ? (aiResult.ai_approved - aiResult.false_approvals) /
+      aiResult.ai_approved
+    : 0
+
+const aiRecall =
+  benchmark && benchmark.ground_truth_recoverable > 0
+    ? (aiResult?.ai_successful_recoveries ?? 0) /
+      benchmark.ground_truth_recoverable
+    : 0
+
+  const f1 =
+    precision + aiRecall > 0
+      ? (2 * precision * aiRecall) / (precision + aiRecall)
+      : 0
+
+const display = {
+  totalPayments: benchmark?.total_payments ?? 0,
+  failedPayments: benchmark?.failed_payments ?? 0,
+  groundTruthRecoverable: benchmark?.ground_truth_recoverable ?? 0,
+  baselineOpportunities: benchmark?.baseline_opportunities ?? 0,
+
+  aiCandidates: aiResult?.ai_candidates ?? 0,
+  aiApproved: aiResult?.ai_approved ?? 0,
+  aiSuccessfulRecoveries:
+    aiResult?.ai_successful_recoveries ?? 0,
+  aiFalseApprovals: aiResult?.false_approvals ?? 0,
+
+  baselineRevenue: benchmark?.baseline_revenue ?? 0,
+  aiRevenue: aiResult?.ai_revenue ?? 0,
+
+  combinedRevenue:
+    (benchmark?.baseline_revenue ?? 0) +
+    (aiResult?.ai_revenue ?? 0),
+
+  recoveryRate:
+    benchmark?.revenue_at_risk
+      ? (
+          ((benchmark.baseline_revenue ?? 0) +
+            (aiResult?.ai_revenue ?? 0)) /
+          benchmark.revenue_at_risk
+        )
+      : 0,
+}
 
   return (
     <div
@@ -381,7 +489,7 @@ export function RecoveryView() {
                 color: 'rgba(255,255,255,.45)',
               }}
             >
-              OMNIX identifies failed payments, asks a reasoning model to
+              REVORA identifies failed payments, asks a reasoning model to
               diagnose the failure, verifies the diagnosis against transaction
               evidence, and applies deterministic safety policies before any
               automated recovery is authorized.
@@ -401,9 +509,25 @@ export function RecoveryView() {
               textTransform: 'uppercase',
             }}
           >
-            ● Simulation benchmark
+            {loading ? '◌ Loading benchmark' : '● Live simulation benchmark'}
           </div>
         </div>
+
+        {error && (
+          <div
+            style={{
+              marginBottom: 18,
+              padding: '12px 14px',
+              borderRadius: 9,
+              border: '1px solid rgba(217,180,90,.2)',
+              background: 'rgba(217,180,90,.035)',
+              color: '#d9b45a',
+              fontSize: 11,
+            }}
+          >
+            Recovery API unavailable: {error}
+          </div>
+        )}
 
         {/* Main revenue cards */}
         <div
@@ -416,28 +540,28 @@ export function RecoveryView() {
         >
           <MetricCard
             label="Revenue at risk"
-            value={money(BENCHMARK.baselineRevenue)}
+            value={money(display.baselineRevenue)}
             detail="Detected baseline opportunity"
             accent
           />
 
           <MetricCard
             label="AI incremental"
-            value={money(BENCHMARK.aiRevenue)}
-            detail="Additional approved recovery"
+            value={money(display.aiRevenue)}
+            detail={`${display.aiApproved} additional approved recoveries`}
             accent
           />
 
           <MetricCard
             label="Combined recovered"
-            value={money(BENCHMARK.combinedRevenue)}
+            value={money(display.combinedRevenue)}
             detail="Baseline + AI recovery"
             accent
           />
 
           <MetricCard
             label="Recovery rate"
-            value={percent(BENCHMARK.recoveryRate)}
+            value={percent(display.recoveryRate)}
             detail="Of recoverable revenue"
           />
         </div>
@@ -453,25 +577,25 @@ export function RecoveryView() {
         >
           <MetricCard
             label="Payments"
-            value={BENCHMARK.totalPayments.toLocaleString()}
-            detail={`${BENCHMARK.failedPayments} failed`}
+            value={display.totalPayments.toLocaleString()}
+            detail={`${display.failedPayments} failed`}
           />
 
           <MetricCard
             label="Baseline opportunities"
-            value={BENCHMARK.baselineOpportunities.toString()}
+            value={display.baselineOpportunities.toString()}
             detail="High-confidence detector output"
           />
 
           <MetricCard
             label="AI candidates"
-            value={BENCHMARK.aiCandidates.toString()}
-            detail={`${BENCHMARK.aiApproved} approved`}
+            value={display.aiCandidates.toString()}
+            detail={`${display.aiApproved} approved`}
           />
 
           <MetricCard
             label="False approvals"
-            value={BENCHMARK.aiFalseApprovals.toString()}
+            value={display.aiFalseApprovals.toString()}
             detail="Automated safety benchmark"
           />
         </div>
@@ -613,7 +737,7 @@ export function RecoveryView() {
                     color: '#d9b45a',
                   }}
                 >
-                  {percent(BENCHMARK.precision)}
+                  {percent(precision)}
                 </div>
               </div>
 
@@ -642,7 +766,7 @@ export function RecoveryView() {
                     color: '#d9b45a',
                   }}
                 >
-                  {percent(BENCHMARK.recall)}
+                  {percent(aiRecall)}
                 </div>
               </div>
 
@@ -671,7 +795,7 @@ export function RecoveryView() {
                     color: '#d9b45a',
                   }}
                 >
-                  {BENCHMARK.f1.toFixed(2)}
+                  {f1.toFixed(2)}
                 </div>
               </div>
 
@@ -700,7 +824,7 @@ export function RecoveryView() {
                     color: '#9bc9a5',
                   }}
                 >
-                  0
+                  {display.aiFalseApprovals}
                 </div>
               </div>
             </div>
@@ -931,7 +1055,281 @@ export function RecoveryView() {
             </table>
           </div>
         </section>
+        {/* Audit trail + safety controls */}
+        <section
+          style={{
+            marginTop: 14,
+            border: '1px solid rgba(255,255,255,.075)',
+            borderRadius: 14,
+            background: 'rgba(255,255,255,.018)',
+            padding: '20px 22px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: 20,
+              marginBottom: 18,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 11,
+                  letterSpacing: '.15em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,.42)',
+                }}
+              >
+                Audit trail
+              </div>
 
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 15,
+                  color: '#ddd8cc',
+                }}
+              >
+                Every recovery decision is explainable and policy-bounded.
+              </div>
+
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 11,
+                  lineHeight: 1.6,
+                  color: 'rgba(255,255,255,.4)',
+                  maxWidth: 720,
+                }}
+              >
+                The model can recommend an action, but deterministic evidence
+                checks and recovery policy decide whether execution is allowed.
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: '7px 10px',
+                borderRadius: 8,
+                border: '1px solid rgba(117,190,137,.18)',
+                background: 'rgba(117,190,137,.035)',
+                color: '#9bc9a5',
+                fontSize: 9,
+                letterSpacing: '.1em',
+                textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Policy enforced
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+              gap: 8,
+            }}
+          >
+            {[
+              {
+                step: '01',
+                title: 'Detection',
+                detail: 'Failure identified',
+              },
+              {
+                step: '02',
+                title: 'Diagnosis',
+                detail: 'AI recommendation recorded',
+              },
+              {
+                step: '03',
+                title: 'Evidence',
+                detail: 'Failure + history verified',
+              },
+              {
+                step: '04',
+                title: 'Authorization',
+                detail: 'Safety policy evaluated',
+              },
+              {
+                step: '05',
+                title: 'Execution',
+                detail: 'Approved action dispatched',
+              },
+            ].map((item) => (
+              <div
+                key={item.step}
+                style={{
+                  padding: '13px 12px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(255,255,255,.06)',
+                  background: 'rgba(255,255,255,.015)',
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: 'monospace',
+                    fontSize: 9,
+                    color: '#d9b45a',
+                    marginBottom: 8,
+                  }}
+                >
+                  {item.step}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: '#ddd8cc',
+                    marginBottom: 5,
+                  }}
+                >
+                  {item.title}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 9,
+                    lineHeight: 1.45,
+                    color: 'rgba(255,255,255,.38)',
+                  }}
+                >
+                  {item.detail}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              marginTop: 14,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+              gap: 8,
+            }}
+          >
+            {[
+              ['Confidence gate', 'Low-confidence cases → review'],
+              ['Retry limit', 'Bounded retries only'],
+              ['Economic floor', 'Low-value actions → no action'],
+              ['Idempotency', 'Duplicate recovery → blocked'],
+            ].map(([title, detail]) => (
+              <div
+                key={title}
+                style={{
+                  padding: '11px 12px',
+                  borderRadius: 9,
+                  border: '1px solid rgba(217,180,90,.09)',
+                  background: 'rgba(217,180,90,.025)',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 9,
+                    textTransform: 'uppercase',
+                    letterSpacing: '.08em',
+                    color: '#d9b45a',
+                  }}
+                >
+                  {title}
+                </div>
+
+                <div
+                  style={{
+                    marginTop: 5,
+                    fontSize: 10,
+                    lineHeight: 1.45,
+                    color: 'rgba(255,255,255,.42)',
+                  }}
+                >
+                  {detail}
+                </div>
+              </div>
+            ))}
+                      <div
+            style={{
+              marginTop: 14,
+              padding: '15px 16px',
+              borderRadius: 10,
+              border: '1px solid rgba(255,255,255,.07)',
+              background: 'rgba(255,255,255,.012)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10,
+                letterSpacing: '.12em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,.38)',
+                marginBottom: 12,
+              }}
+            >
+              Stopping rules
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: 10,
+              }}
+            >
+              {[
+                {
+                  title: 'STOP — low confidence',
+                  detail:
+                    'If the diagnosis does not meet the confidence threshold, execution stops and the case is escalated.',
+                },
+                {
+                  title: 'STOP — unsupported evidence',
+                  detail:
+                    'If the recommendation conflicts with failure evidence or retry history, no automated action is allowed.',
+                },
+                {
+                  title: 'STOP — retry exhausted',
+                  detail:
+                    'If the transaction has reached its retry limit, OMNIX stops retrying and routes the case to manual review.',
+                },
+              ].map((rule) => (
+                <div
+                  key={rule.title}
+                  style={{
+                    padding: '12px',
+                    borderRadius: 9,
+                    border: '1px solid rgba(217,180,90,.1)',
+                    background: 'rgba(217,180,90,.02)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 9,
+                      fontFamily: 'monospace',
+                      color: '#d9b45a',
+                      marginBottom: 7,
+                    }}
+                  >
+                    {rule.title}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 10,
+                      lineHeight: 1.55,
+                      color: 'rgba(255,255,255,.42)',
+                    }}
+                  >
+                    {rule.detail}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          </div>
+        </section>
         {/* Footer note */}
         <div
           style={{
@@ -945,11 +1343,12 @@ export function RecoveryView() {
           }}
         >
           <span>
-            Benchmark: 1,000 simulated payments · 112 ground-truth recoverable
+            Benchmark: {display.totalPayments.toLocaleString()} simulated
+            payments · {display.groundTruthRecoverable} ground-truth recoverable
           </span>
 
           <span>
-            0 false automated approvals
+            {display.aiFalseApprovals} false automated approvals
           </span>
         </div>
       </div>

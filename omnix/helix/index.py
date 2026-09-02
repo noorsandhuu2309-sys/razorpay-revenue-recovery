@@ -217,5 +217,5 @@ def available() -> tuple[bool, str]:
         return True, ""
     if not CORPUS_PATH.exists():
         return False, ("The bioinformatics corpus has not been built yet. "
-                       "Run: python -m omnix.helix.ingest")
+                       "Run: python -m omni.helix.ingest")
     return True, ""

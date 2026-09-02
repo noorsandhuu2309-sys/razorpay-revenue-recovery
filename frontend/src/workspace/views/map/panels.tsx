@@ -774,7 +774,7 @@ export function ConditionsPanel({ focus }: { focus: Point | null }) {
           </ul>
         )}
         <p className="omx-gx-sub dim">
-          TERRA reports the conditions. Ask OMNIX for the judgement.
+          TERRA reports the conditions. Ask REVORA for the judgement.
         </p>
       </section>
     </>

@@ -109,7 +109,7 @@ export function AskNovaView() {
     <div className="omx-ask-view">
       <div className="omx-ask-head">
         <div>
-          <h2>Ask OMNIX</h2>
+          <h2>Ask REVORA</h2>
           <span className="omx-label">
             {space ? `conversation for ${space.name}` : 'conversation'}
             {turns.length > 0 && ` · ${turns.length} turns · remembered`}

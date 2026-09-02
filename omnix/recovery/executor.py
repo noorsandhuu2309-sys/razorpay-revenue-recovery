@@ -88,12 +88,49 @@ def execute_recoveries(
 
     results: List[RecoveryResult] = []
 
+    # ---------------------------------------------------------
+    # Idempotency guard:
+    # A transaction can only be executed once within
+    # the same recovery batch.
+    # ---------------------------------------------------------
+    executed_transaction_ids = set()
+
     for decision in decisions:
-        payment = payments_by_id.get(decision.transaction_id)
-        opportunity = opportunities_by_id.get(decision.transaction_id)
+        payment = payments_by_id.get(
+            decision.transaction_id
+        )
+
+        opportunity = opportunities_by_id.get(
+            decision.transaction_id
+        )
 
         if payment is None or opportunity is None:
             continue
+
+        # -----------------------------------------------------
+        # Block duplicate recovery attempts.
+        # -----------------------------------------------------
+        if decision.transaction_id in executed_transaction_ids:
+            results.append(
+                RecoveryResult(
+                    transaction_id=decision.transaction_id,
+                    attempted=False,
+                    success=False,
+                    amount_recovered=0.0,
+                    action="manual_review",
+                    message=(
+                        "Duplicate recovery blocked "
+                        "by idempotency guard"
+                    ),
+                )
+            )
+            continue
+
+        # Mark this transaction as executed BEFORE calling
+        # the executor so it cannot be executed twice.
+        executed_transaction_ids.add(
+            decision.transaction_id
+        )
 
         results.append(
             execute_recovery(
@@ -103,4 +140,5 @@ def execute_recoveries(
             )
         )
 
+    # Return only after every decision has been processed.
     return results

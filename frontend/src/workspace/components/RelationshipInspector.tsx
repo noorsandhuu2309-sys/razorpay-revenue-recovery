@@ -238,7 +238,7 @@ export function RelationshipInspector({ edge, from, to }: {
             <IconTrack size={12} /> Track both
           </button>
           <button className="omx-btn" onClick={ask}>
-            <IconQuery size={12} /> Ask OMNIX
+            <IconQuery size={12} /> Ask REVORA
           </button>
         </div>
         {note && <p className="omx-empty-line" style={{ marginTop: 8 }}>{note}</p>}

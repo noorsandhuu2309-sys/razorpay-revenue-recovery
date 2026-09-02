@@ -21,12 +21,15 @@ from fastapi.responses import (
     StreamingResponse, JSONResponse, FileResponse, RedirectResponse, Response,
 )
 from fastapi.staticfiles import StaticFiles
-
+from omnix.recovery.models import PaymentStatus
 from .agents import AGENT_CLASSES
 from .agents.vision import extract_image_path  # noqa: F401  (kept for parity)
 from .config import AGENTS
 from .router import classify, VALID_AGENTS
-
+from .recovery.models import PaymentStatus
+from .recovery.simulator import generate_payments
+from .recovery.detector import detect_recovery_opportunities
+from .recovery.experiment import run_enhanced_recovery
 WEB_DIR = Path(__file__).resolve().parent / "web"
 
 
@@ -390,7 +393,405 @@ def _model_names(data):
             out.append(name)
     return out
 
+@app.get("/api/recovery")
+def recovery():
+    """
+    Fast revenue-recovery dashboard endpoint.
 
+    Runs the deterministic recovery baseline only so the dashboard
+    responds immediately. The full AI benchmark remains available
+    through the recovery experiment module and should not run on
+    every page refresh.
+    """
+
+    payments = generate_payments(1000)
+
+    baseline_opportunities = detect_recovery_opportunities(
+        payments
+    )
+
+    baseline_ids = {
+        opportunity.transaction_id
+        for opportunity in baseline_opportunities
+    }
+
+    payment_by_id = {
+        payment.transaction_id: payment
+        for payment in payments
+    }
+
+    failed_payments = sum(
+        payment.status == PaymentStatus.FAILED
+        for payment in payments
+    )
+
+    ground_truth_recoverable = sum(
+        payment.recoverable
+        for payment in payments
+    )
+
+    recoverable_revenue = sum(
+        payment.amount
+        for payment in payments
+        if payment.recoverable
+    )
+
+    baseline_revenue = sum(
+        payment.amount
+        for transaction_id, payment in payment_by_id.items()
+        if (
+            transaction_id in baseline_ids
+            and payment.recoverable
+        )
+    )
+
+    return {
+        "total_payments": len(payments),
+        "failed_payments": failed_payments,
+        "ground_truth_recoverable": ground_truth_recoverable,
+
+        "baseline_opportunities": len(
+            baseline_opportunities
+        ),
+
+        "ai_candidates": 0,
+        "ai_approved": 0,
+        "ai_successful_recoveries": 0,
+        "false_approvals": 0,
+
+        "revenue_at_risk": round(
+            recoverable_revenue,
+            2,
+        ),
+
+        "baseline_revenue": round(
+            baseline_revenue,
+            2,
+        ),
+
+        "ai_revenue": 0.0,
+
+        "combined_revenue": round(
+            baseline_revenue,
+            2,
+        ),
+
+        "recovery_rate": round(
+            (
+                baseline_revenue / recoverable_revenue
+                if recoverable_revenue
+                else 0.0
+            ),
+            4,
+        ),
+
+        "status": "ok",
+    }
+
+@app.get("/api/recovery")
+def recovery():
+    """
+    Fast revenue-recovery dashboard endpoint.
+
+    Runs the deterministic recovery baseline only so the dashboard
+    responds immediately. The full AI benchmark remains available
+    through the recovery experiment module.
+    """
+
+    payments = generate_payments(1000)
+
+    baseline_opportunities = detect_recovery_opportunities(
+        payments
+    )
+
+    baseline_ids = {
+        opportunity.transaction_id
+        for opportunity in baseline_opportunities
+    }
+
+    payment_by_id = {
+        payment.transaction_id: payment
+        for payment in payments
+    }
+
+    failed_payments = sum(
+        payment.status == PaymentStatus.FAILED
+        for payment in payments
+    )
+
+    ground_truth_recoverable = sum(
+        payment.recoverable
+        for payment in payments
+    )
+
+    recoverable_revenue = sum(
+        payment.amount
+        for payment in payments
+        if payment.recoverable
+    )
+
+    baseline_revenue = sum(
+        payment.amount
+        for transaction_id, payment in payment_by_id.items()
+        if (
+            transaction_id in baseline_ids
+            and payment.recoverable
+        )
+    )
+
+    return {
+        "total_payments": len(payments),
+        "failed_payments": failed_payments,
+        "ground_truth_recoverable": ground_truth_recoverable,
+
+        "baseline_opportunities": len(
+            baseline_opportunities
+        ),
+
+        "ai_candidates": 0,
+        "ai_approved": 0,
+        "ai_successful_recoveries": 0,
+        "false_approvals": 0,
+
+        "revenue_at_risk": round(
+            recoverable_revenue,
+            2,
+        ),
+
+        "baseline_revenue": round(
+            baseline_revenue,
+            2,
+        ),
+
+        "ai_revenue": 0.0,
+
+        "combined_revenue": round(
+            baseline_revenue,
+            2,
+        ),
+
+        "recovery_rate": round(
+            (
+                baseline_revenue / recoverable_revenue
+                if recoverable_revenue
+                else 0.0
+            ),
+            4,
+        ),
+
+        "status": "ok",
+    }
+
+
+@app.get("/api/recovery/ai")
+def recovery_ai():
+    """
+    Run the AI-assisted revenue-recovery benchmark.
+
+    Returns aggregate benchmark metrics together with
+    transaction-level audit information.
+    """
+
+    payments = generate_payments(1000)
+
+    result = run_enhanced_recovery(
+        payments,
+        max_ai_candidates=25,
+    )
+
+    payment_by_id = {
+        payment.transaction_id: payment
+        for payment in payments
+    }
+
+    result_by_id = {
+        recovery.transaction_id: recovery
+        for recovery in result.all_results
+    }
+
+    # ---------------------------------------------------------
+    # AI recovered revenue
+    # ---------------------------------------------------------
+    ai_revenue = sum(
+        recovery.amount_recovered
+        for recovery in result.all_results
+        if recovery.success
+    )
+
+    # ---------------------------------------------------------
+    # False approvals
+    # ---------------------------------------------------------
+    false_approvals = sum(
+        not payment_by_id[candidate.transaction_id].recoverable
+        for candidate in result.ai_approved
+        if candidate.transaction_id in payment_by_id
+    )
+
+    # ---------------------------------------------------------
+    # Baseline metrics from the SAME AI benchmark batch.
+    # ---------------------------------------------------------
+    baseline_revenue = sum(
+        opportunity.amount
+        for opportunity in result.baseline_opportunities
+    )
+
+    revenue_at_risk = sum(
+        payment.amount
+        for payment in payments
+        if payment.recoverable
+    )
+
+    combined_revenue = (
+        baseline_revenue + ai_revenue
+    )
+
+    recovery_rate = (
+        combined_revenue / revenue_at_risk
+        if revenue_at_risk > 0
+        else 0.0
+    )
+
+    # ---------------------------------------------------------
+    # Build transaction-level audit trail.
+    # ---------------------------------------------------------
+    audit_trail = []
+
+    for candidate in result.ai_candidates:
+        payment = payment_by_id.get(
+            candidate.transaction_id
+        )
+
+        if payment is None:
+            continue
+
+        decision = candidate.decision
+        evidence = candidate.evidence
+        recovery = result_by_id.get(
+            candidate.transaction_id
+        )
+
+        if recovery is not None and recovery.success:
+            status = "Recovered"
+        elif not decision.allowed:
+            status = "Manual review"
+        else:
+            status = "Recovery failed"
+
+        audit_trail.append(
+            {
+                "transaction_id": candidate.transaction_id,
+                "merchant_id": payment.merchant_id,
+                "amount": payment.amount,
+                "payment_method": payment.payment_method,
+                "failure_code": payment.failure_code,
+                "failure_type": payment.failure_type,
+                "retry_count": payment.retry_count,
+
+                # AI diagnosis
+                "recommended_action": (
+                    candidate.diagnosis.recommended_action
+                ),
+
+                # Deterministic evidence verification
+                "evidence_verdict": evidence.verdict,
+                "evidence_confidence": evidence.confidence,
+
+                # Deterministic policy authorization
+                "allowed": decision.allowed,
+                "policy_action": decision.action,
+                "policy_reason": decision.reason,
+                "rules_checked": decision.rules_checked,
+
+                # Final execution result
+                "attempted": (
+                    recovery.attempted
+                    if recovery is not None
+                    else False
+                ),
+                "success": (
+                    recovery.success
+                    if recovery is not None
+                    else False
+                ),
+                "amount_recovered": (
+                    recovery.amount_recovered
+                    if recovery is not None
+                    else 0.0
+                ),
+                "execution_message": (
+                    recovery.message
+                    if recovery is not None
+                    else "Not executed"
+                ),
+
+                "status": status,
+            }
+        )
+
+    # ---------------------------------------------------------
+    # Final benchmark response.
+    # ---------------------------------------------------------
+    return {
+        "total_payments": len(payments),
+
+        "failed_payments": sum(
+            payment.status == PaymentStatus.FAILED
+            for payment in payments
+        ),
+
+        "ground_truth_recoverable": sum(
+            payment.recoverable
+            for payment in payments
+        ),
+
+        "baseline_opportunities": len(
+            result.baseline_opportunities
+        ),
+
+        "baseline_revenue": round(
+            baseline_revenue,
+            2,
+        ),
+
+        "revenue_at_risk": round(
+            revenue_at_risk,
+            2,
+        ),
+
+        "ai_candidates": len(
+            result.ai_candidates
+        ),
+
+        "ai_approved": len(
+            result.ai_approved
+        ),
+
+        "ai_successful_recoveries": sum(
+            recovery.success
+            for recovery in result.all_results
+        ),
+
+        "false_approvals": false_approvals,
+
+        "ai_revenue": round(
+            ai_revenue,
+            2,
+        ),
+
+        "combined_revenue": round(
+            combined_revenue,
+            2,
+        ),
+
+        "recovery_rate": round(
+            recovery_rate,
+            4,
+        ),
+
+        "audit_trail": audit_trail,
+
+        "status": "ok",
+    }
 @app.get("/api/health")
 def health():
     """Reports whether the web server is up, Ollama is reachable, and which of

@@ -238,13 +238,13 @@ export function IntentsView() {
         title="Intents"
         what="A standing monitor, not a question you ask once. An Intent names an
               outcome you care about — “tell me when Russia and China start
-              cooperating on this” — and OMNIX re-checks it on its own cadence
+              cooperating on this” — and REVORA re-checks it on its own cadence
               while you are elsewhere. It reads real material: new events, new
               relationships and new claims that have appeared since the last
               check, filtered to the relevance floor you set. Each thing it
               catches is recorded as a hit against the Intent, deduplicated, so
               the same development is never reported twice."
-        how="Select the objects you care about anywhere in OMNIX and press
+        how="Select the objects you care about anywhere in REVORA and press
              Watch, or create one here with keywords. Then leave. Hits collect
              under the Intent and surface in the Brief."
       />
@@ -261,10 +261,10 @@ export function IntentsView() {
           <div className="glyph"><IconIntents size={34} /></div>
           <h3>No standing Intents</h3>
           <p>
-            An Intent is an outcome OMNIX keeps pursuing rather than a question
+            An Intent is an outcome REVORA keeps pursuing rather than a question
             asked once — “monitor this company”, “tell me when these two start
             cooperating”. Select objects and press <strong>Watch</strong>, or
-            create one here. OMNIX checks each on its own cadence and records
+            create one here. REVORA checks each on its own cadence and records
             what it caught.
           </p>
         </div>
