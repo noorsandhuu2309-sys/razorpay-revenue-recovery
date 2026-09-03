@@ -1,99 +1,145 @@
-# Revora — AI Revenue Recovery Agent
+⚡ Revora — AI Revenue Recovery Agent
 
-Revora is an AI-assisted revenue recovery system built for **Razorpay's AI Revenue Recovery track**.
+Turn failed payments into recoverable revenue — with AI diagnosis, deterministic safety gates, bounded execution, and a complete audit trail.
 
-It detects failed payments that may represent recoverable revenue, uses AI to diagnose the likely recovery path, verifies the AI recommendation against deterministic evidence, applies explicit recovery policies, and executes only bounded simulated recovery actions.
+Revora is an AI-assisted revenue recovery platform built for Razorpay's AI Revenue Recovery track.
 
-The key principle is simple:
+Instead of treating payment recovery as a simple prediction problem, Revora builds an end-to-end decision system:
 
-> **AI recommends. Deterministic controls authorize. The executor stays bounded and auditable.**
+Detect → Diagnose → Verify → Authorize → Recover → Measure → Audit
 
----
+The central design principle is:
 
-## 🎯 Problem
+AI recommends. Deterministic controls authorize. The executor stays bounded and auditable.
 
-Payment failures create revenue that is at risk, but not every failed payment should be retried automatically.
+🚀 Why Revora?
 
-A recovery system needs to answer:
+A failed payment does not automatically mean lost revenue.
 
-1. Which failed payments are worth recovering?
-2. Why did the payment fail?
-3. What intervention should be attempted?
-4. Is there enough evidence to trust that recommendation?
-5. Is the action allowed by policy?
-6. When should the system stop and escalate to manual review?
-7. How much revenue was actually recovered?
+Some failures are recoverable. Some require a different intervention. Some should never be retried automatically.
 
-Revora is designed around this complete recovery workflow rather than simply predicting which payments might recover.
+Revora answers the complete set of questions a real recovery operation needs to answer:
 
----
+💸 What revenue is at risk?
 
-## 💡 Solution
+🔎 Which failed payments are worth pursuing?
 
-Revora combines a deterministic recovery baseline with an AI-assisted recovery layer.
+🧠 Why did the payment fail?
 
-### Recovery flow
+🎯 What recovery action is appropriate?
 
-```text
-Failed Payments
-      │
-      ▼
-┌──────────────────────┐
-│ Detect Opportunities │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│   AI Diagnosis       │
-│ failure + action     │
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ Evidence Verification│
-└──────────┬───────────┘
-           │
-           ▼
-┌──────────────────────┐
-│ Policy Authorization │
-│ confidence / retries │
-│ action / amount limit │
-└──────────┬───────────┘
-           │
-       ┌───┴────────────┐
-       │                │
-       ▼                ▼
-   Execute          Manual Review
-       │
-       ▼
- Simulated Recovery
-       │
-       ▼
- Audit Trail + Metrics
-```
+🧾 What evidence supports that recommendation?
 
----
+🛡️ Is the action permitted by policy?
 
-## 🤖 Where AI Is Used
+⛔ When should automation stop?
 
-Revora uses AI for the **diagnosis and recommendation layer**.
+👤 When should a case go to manual review?
 
-For each AI candidate, the system produces a diagnosis containing information such as:
+📈 How much revenue did the strategy actually recover?
 
-- likely failure interpretation
-- recommended recovery action
-- AI confidence
-- reasoning used for the recommendation
+🧪 Did AI improve on the deterministic baseline?
+
+📝 Can every decision be explained afterwards?
+
+That makes Revora an AI decision system for revenue recovery, not just an AI prediction model.
+
+🧠 Product Overview
+
+                    FAILED PAYMENTS
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │ Opportunity Detector│
+                │ revenue at risk     │
+                └──────────┬──────────┘
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │   AI DIAGNOSIS      │
+                │ failure + action    │
+                │ confidence + reason │
+                └──────────┬──────────┘
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │ EVIDENCE VERIFIER   │
+                │ deterministic check │
+                └──────────┬──────────┘
+                           │
+                           ▼
+                ┌─────────────────────┐
+                │ POLICY AUTHORIZER   │
+                │ confidence          │
+                │ retry limits        │
+                │ action allowlist    │
+                │ amount limits       │
+                └──────────┬──────────┘
+                           │
+                    ┌──────┴──────┐
+                    ▼             ▼
+                 EXECUTE      MANUAL REVIEW
+                    │
+                    ▼
+            SIMULATED RECOVERY
+                    │
+                    ▼
+          METRICS + AUDIT TRAIL
+
+✨ Core Features
+
+💰 1. Revenue-at-Risk Detection
+
+Revora starts with failed-payment data and identifies opportunities that may be recoverable.
+
+The recovery dashboard can expose:
+
+total payment volume
+
+failed payments
+
+recoverable payment opportunities
+
+revenue at risk
+
+baseline recovery
+
+AI candidate volume
+
+approved candidates
+
+successful recoveries
+
+false approvals
+
+incremental AI recovery
+
+combined recovered revenue
+
+recovery rate
+
+This keeps the product focused on the business outcome:
+
+How much revenue can we safely recover?
+
+🤖 2. AI Payment Diagnosis
+
+AI is used where it creates the most value: understanding the failure and recommending an intervention.
+
+For an AI candidate, Revora can represent:
+
+likely failure interpretation
+
+recommended recovery action
+
+AI confidence
+
+reasoning behind the recommendation
 
 The AI recommendation is then converted into a deterministic representation before it can influence execution.
 
-### Important safety boundary
+The safety boundary
 
-The AI model **does not directly execute a payment action**.
-
-Instead:
-
-```text
 AI Recommendation
        ↓
 Deterministic Evidence Check
@@ -101,170 +147,171 @@ Deterministic Evidence Check
 Deterministic Policy Check
        ↓
 Bounded Executor
-```
 
-This keeps financial execution outside the direct control of the model.
+The AI model does not directly execute a payment action.
 
----
+🛡️ 3. Evidence-First Recovery
 
-## 🛡️ Safety & Control Layer
+A model recommendation is not enough.
 
-Revora is intentionally designed with multiple gates before an automated recovery can execute.
+Before automation can proceed, Revora checks whether the recommendation is supported by the available evidence.
 
-### Evidence verification
+This creates a clear separation between:
 
-The AI diagnosis must pass an evidence check before the action can proceed.
+what the AI believes
 
-### Confidence threshold
+and
 
-Low-confidence recommendations are rejected from automatic execution and routed to manual review.
+what the system is authorized to do.
 
-Current policy threshold:
+The product also exposes claims, sources, provenance and verification state as part of the wider intelligence workspace.
 
-```text
-Minimum evidence confidence: 0.80
-```
+🔐 4. Deterministic Policy Engine
 
-### Retry limit
+Even a high-confidence AI recommendation can be rejected.
 
-Automatic recovery is bounded by a maximum retry count.
+Revora applies explicit policy gates including:
 
-Current policy:
+Guardrail
 
-```text
-Maximum automatic retry count: 2
-```
+Current policy
 
-### Action allowlist
+Minimum evidence confidence
 
-Only supported automated actions can be executed.
+0.80
 
-Currently:
+Maximum automatic retries
 
-```text
-retry_payment
-```
+2
 
-Other recommendations are routed to manual review.
+Automatic transaction amount limit
 
-### Amount limit
-
-High-value transactions are not automatically recovered.
-
-Current automatic amount limit:
-
-```text
 ₹50,000
-```
 
-Transactions above this limit are escalated for manual review.
+Automated action
 
-### Idempotency
+retry_payment
 
-The executor includes a batch-level idempotency guard so the same transaction cannot be executed twice within the same recovery batch.
+A recommendation can therefore reach:
 
-### Manual escalation
+AI Approved
+    ↓
+Evidence Passed
+    ↓
+Policy Passed
+    ↓
+Execute
 
-When a policy gate fails, the system does not force execution.
+or:
 
-Instead:
+AI Recommendation
+    ↓
+Gate Failed
+    ↓
+Blocked
+    ↓
+Manual Review
 
-```text
-Automatic Recovery → Blocked → Manual Review
-```
+⛔ 5. Safe Stopping Rules
 
----
+Revora deliberately knows when not to automate.
 
-## 🛑 Stopping Rules
+Automatic recovery stops when conditions such as these are encountered:
 
-Revora stops automatic recovery when important safety conditions are not satisfied.
+low confidence
 
-Examples include:
+failed evidence verification
 
-- low confidence
-- failed evidence verification
-- unsupported recovery action
-- retry limit reached
-- transaction amount exceeds the automatic limit
-- duplicate execution within the recovery batch
+unsupported recovery action
 
-This prevents the system from optimizing for recovery at the expense of safe execution.
+retry limit reached
 
----
+transaction amount exceeds the automatic limit
 
-## 💰 Measured Recovery
+duplicate execution in the recovery batch
 
-Revora evaluates recovery over a simulated payment batch.
+This prevents the system from optimizing recovery rate at the expense of safe execution.
 
-The dashboard measures:
+⚙️ 6. Bounded & Idempotent Execution
 
-- total payments
-- failed payments
-- ground-truth recoverable payments
-- baseline recovery opportunities
-- AI candidates
-- AI-approved candidates
-- successful AI recoveries
-- false approvals
-- revenue at risk
-- baseline recovered revenue
-- AI incremental recovered revenue
-- combined recovered revenue
-- recovery rate
+The executor is intentionally constrained.
 
-### Example benchmark
+It operates only on supported actions, within configured limits, and includes a batch-level idempotency guard so that the same transaction is not executed twice within a recovery batch.
 
-A representative 1,000-payment benchmark can be displayed in the dashboard with metrics such as:
+For the hackathon environment, the execution layer is simulated rather than connected to live payment rails.
 
-```text
-1,000 payments
-252 failed payments
-₹9.4L+ failed-payment revenue at risk
-AI-assisted incremental recovery
-0 false approvals in the displayed run
-```
+🧪 7. Deterministic Baseline + AI Benchmark
 
-The exact numbers can vary between benchmark runs because the recovery dataset is generated by the simulator.
+Revora does not simply show an AI number and call it success.
 
-**All revenue figures shown by Revora are simulated benchmark results, not real payment processing or real customer funds.**
+It compares the AI-assisted strategy against a deterministic baseline.
 
----
+The benchmark can report:
 
-## 📊 Model Quality
+baseline recovery opportunities
 
-Revora also reports AI decision quality using:
+AI candidates
 
-### Precision
+AI-approved candidates
 
-```text
-Correct AI approvals / Total AI approvals
-```
+successful AI recoveries
 
-### Recall
+false approvals
 
-```text
-Successful AI recoveries / Ground-truth recoverable payments
-```
+baseline recovered revenue
 
-### F1 score
+AI incremental recovered revenue
 
-```text
-2 × Precision × Recall / (Precision + Recall)
-```
+combined recovered revenue
 
-The dashboard also exposes false approvals so that aggressive automation cannot be presented as success without measuring safety.
+recovery rate
 
-Because Revora uses a conservative AI candidate budget, recall may be intentionally lower than a system that attempts many more candidates.
+This creates an actual experiment loop:
 
----
+Baseline
+   ↓
+AI Strategy
+   ↓
+Policy + Evidence Gates
+   ↓
+Simulated Outcomes
+   ↓
+Compare Recovery
+   ↓
+Measure Incremental Value
 
-## 🔍 Audit Trail
+All payment and revenue results in the demo are simulated benchmark results.
 
-Every AI candidate can be represented through a transaction-level audit record.
+📊 8. AI Quality Metrics
 
-The audit trail contains information including:
+Revora measures decision quality instead of hiding behind a single recovery number.
 
-```text
+Precision
+
+Correct AI approvals
+─────────────────────
+Total AI approvals
+
+Recall
+
+Successful AI recoveries
+─────────────────────────
+Ground-truth recoverable payments
+
+F1
+
+2 × Precision × Recall
+───────────────────────
+Precision + Recall
+
+False approvals are explicitly surfaced so aggressive automation cannot be presented as success without measuring safety.
+
+🧾 9. Transaction-Level Audit Trail
+
+Every recovery candidate can be represented through an auditable decision record.
+
+Example fields include:
+
 Transaction ID
 Merchant ID
 Amount
@@ -282,58 +329,407 @@ Execution attempt
 Execution result
 Amount recovered
 Final status
-```
 
-This makes the recovery decision explainable rather than presenting the AI result as a black box.
+This makes each recovery decision explainable instead of turning the AI into a black box.
 
----
+🗺️ 10. Decision Intelligence Graph
 
-## 🧪 Simulation
+Revora's intelligence workspace goes beyond a traditional recovery table.
 
-Revora uses a simulated payment environment.
+The Graph view represents objects and relationships as an interactive intelligence graph.
 
-The executor does **not** process real payments.
+It supports three ways of reading the same subgraph:
 
-Instead, the simulator uses the generated payment dataset's recoverability state to evaluate whether a simulated retry would succeed.
+ORBIT
+What is attached to this object, and how?
 
-Example:
+NETWORK
+What shape is all of this?
 
-```text
-Payment failed
-      ↓
-AI recommends retry
-      ↓
-Evidence passes
-      ↓
-Policy passes
-      ↓
-Simulated retry
-      ↓
-Success / Failure
-```
+CLUSTERS
+What groups exist here?
 
-This allows the system to measure recovery performance safely without moving real money.
+The graph pipeline applies:
 
----
+Payload
+  ↓
+Trust Lens
+  ↓
+Canvas Filters
+  ↓
+Render Model
+  ↓
+Interactive Graph
 
-## 🏗️ Architecture
+Filters are applied before the simulation/render layout is built, so excluded objects do not continue influencing the visual structure.
 
-### Frontend
+Graph capabilities
 
-- React
-- TypeScript
-- Vite
-- Dashboard-based recovery workspace
+interactive object selection
 
-### Backend
+shared selection across workspace views
 
-- Python
-- FastAPI
-- Recovery simulation and decision pipeline
+Network view
 
-### Core recovery modules
+Cluster/community view
 
-```text
+Orbit exploration
+
+focus mode
+
+focus trail / breadcrumbs
+
+path tracing
+
+fullscreen graph
+
+graph search / find
+
+filters
+
+recency filtering
+
+evidence-only filtering
+
+tracked-only filtering
+
+minimum-strength filtering
+
+hidden object families
+
+hidden relationship classes
+
+graph legend
+
+relationship certainty key
+
+object counts
+
+relationship counts
+
+hidden-object counts
+
+empty/error states
+
+connected-object/no-link state
+
+🌐 11. ReVora Intelligence HUD
+
+The upgraded graph experience adds a dense recovery decision-map layer around the real graph.
+
+The visual language communicates the recovery pipeline:
+
+PAYMENT
+   →
+DIAGNOSIS
+   →
+EVIDENCE
+   →
+POLICY
+   →
+OUTCOME
+
+The graph HUD can surface live, model-derived telemetry such as:
+
+object count
+
+relationship count
+
+community count
+
+graph density
+
+selected-object count
+
+highest-connectivity object
+
+object-family distribution
+
+focus state
+
+path-trace state
+
+trust-calibrated state
+
+live/filter/sync state
+
+The visual system uses:
+
+radar/grid overlays
+
+decision lanes
+
+signal bars
+
+state indicators
+
+compact telemetry cards
+
+relationship/decision labels
+
+responsive layouts
+
+Important: the HUD visualizes the current graph model; it does not fabricate relationships.
+
+🔎 12. Research & Evidence Workspace
+
+Revora's wider intelligence workspace provides multiple lenses over the same underlying material.
+
+Research spine
+
+Ask / NOVA — conversational research
+
+Claims — assertions and their evidence
+
+Sources — source-backed research material
+
+Graph — connected intelligence
+
+Brief — what changed while you were away
+
+The data model supports:
+
+claims
+
+confidence
+
+supporting sources
+
+contradicting sources
+
+provenance
+
+events
+
+tracked objects
+
+workspaces
+
+graph relationships
+
+communities
+
+💬 13. Persistent NOVA Conversation
+
+The NOVA conversation is tied to the workspace/Space rather than being an isolated chat.
+
+Conversation turns can carry:
+
+role
+
+text
+
+intent
+
+model
+
+execution ID
+
+context
+
+timestamp
+
+This allows research context to survive reloads and remain connected to the same workspace.
+
+🧠 14. Challenge / Idea Stress Testing
+
+Revora also includes a Challenge surface for stress-testing an idea before committing to research.
+
+A challenge can expose:
+
+research questions
+
+answered questions
+
+panel size
+
+vendors / viewpoints
+
+stances
+
+assumptions
+
+counterarguments
+
+evidence state
+
+model-opinion disclaimers
+
+The goal is to make the system useful before and after the recovery decision is made.
+
+📑 15. Outputs & Generated Artifacts
+
+The workspace includes an Outputs surface for documents generated from the intelligence already collected.
+
+Supported output structures can include:
+
+text sections
+
+lists
+
+tables
+
+metrics
+
+charts
+
+Generated outputs are represented as artifacts rather than being treated as raw chat responses.
+
+🧭 16. Intents — Persistent Monitoring
+
+Revora supports standing intents around information the user cares about.
+
+An intent can maintain:
+
+creation time
+
+last checked time
+
+last hit time
+
+hit count
+
+recent hits
+
+monitoring state
+
+This turns one-off research into a repeatable intelligence workflow.
+
+🤖 17. Agents & Execution Monitoring
+
+The Agents surface exposes background agent work as observable execution rather than a hidden process.
+
+Agent execution can expose:
+
+worker status
+
+execution mode
+
+progress
+
+current step
+
+completed steps
+
+duration
+
+model usage
+
+input/output token counts
+
+estimated token state
+
+cost
+
+errors
+
+controllability
+
+pause state
+
+pending redirects
+
+generated artifacts
+
+source count
+
+execution trail
+
+This makes AI execution measurable and inspectable.
+
+🗺️ 18. TERRA Intelligence Surfaces
+
+The wider workspace also contains the TERRA intelligence subsystem.
+
+Available surfaces include:
+
+🌍 World Map
+
+📰 News
+
+🔗 Relationships
+
+📊 Analysis
+
+🧠 Intel
+
+🚨 Situation
+
+💬 Ask
+
+🤖 Terra Agents
+
+The World Map is designed around countries, risk, places, routes and conditions.
+
+The geospatial surface can operate with its own layers, search, routes, conditions, memory and geofences.
+
+🧬 19. HELIX
+
+HELIX provides a separate bioinformatics-oriented corpus and grounded answer layer within the same workspace architecture.
+
+This demonstrates that the underlying intelligence framework can support multiple specialized domains rather than being hard-coded around a single dashboard.
+
+🧰 Workspace Experience
+
+Revora is structured as a real intelligence workspace rather than a single screen.
+
+The shell provides shared context across views, including:
+
+Spaces / workspaces
+
+persistent selection
+
+inspector
+
+action bar
+
+breadcrumbs
+
+trust lens
+
+activity panel
+
+NOVA bar
+
+command palette
+
+appearance controls
+
+view-level error boundaries
+
+responsive navigation
+
+fullscreen surfaces where appropriate
+
+A view failure is contained so one broken surface does not have to take down the entire workspace.
+
+🏗️ Architecture
+
+┌────────────────────────────────────────────────────────────┐
+│                    REVORA WORKSPACE                        │
+│                                                            │
+│  Research     Graph      Recovery       Agents    Outputs  │
+│                                                            │
+└────────────────────────────┬───────────────────────────────┘
+                             │
+                             ▼
+                    FastAPI Application
+                             │
+          ┌──────────────────┼──────────────────┐
+          ▼                  ▼                  ▼
+     Intelligence       Recovery Engine      Simulation
+          │                  │                  │
+          ▼                  ▼                  ▼
+     Claims/Sources     Diagnosis/Policy     Outcomes
+          │                  │                  │
+          └──────────────────┼──────────────────┘
+                             ▼
+                    Audit + Metrics Layer
+
+🔄 Recovery Architecture
+
+The recovery engine is intentionally modular:
+
 omnix/
 └── recovery/
     ├── models.py
@@ -346,230 +742,375 @@ omnix/
     ├── policy.py
     ├── executor.py
     └── experiment.py
-```
 
-> The internal Python package remains named `omnix` for implementation compatibility. **Revora** is the user-facing product name.
+The internal Python package remains named omnix for implementation compatibility.
 
----
+Revora is the user-facing product name.
 
-## 🔄 API
+🖥️ Frontend Architecture
 
-### Recovery benchmark
+The frontend is built as a shared workspace shell with specialized views.
 
-```http
+frontend/
+└── src/
+    ├── components/
+    │   ├── ActionBar
+    │   ├── Inspector
+    │   ├── NovaBar
+    │   ├── CommandPalette
+    │   ├── Breadcrumbs
+    │   ├── TrustLens
+    │   └── ActivityPanel
+    │
+    ├── lib/
+    │   ├── graphModel
+    │   ├── views
+    │   ├── auth
+    │   └── appearance
+    │
+    ├── store/
+    │   ├── workspace
+    │   └── graphUi
+    │
+    └── views/
+        ├── Recovery
+        ├── GraphView
+        ├── Home
+        ├── Ask
+        ├── Challenge
+        ├── Compare
+        ├── Timeline
+        ├── Table
+        ├── Brief
+        ├── Claims
+        ├── Sources
+        ├── Outputs
+        ├── Intents
+        ├── Agents
+        ├── Map
+        ├── News
+        ├── Relationships
+        ├── Analysis
+        ├── Intel
+        ├── Situation
+        ├── TerraAgents
+        ├── Helix
+        └── Settings
+
+🔌 API
+
+Recovery benchmark
+
 GET /api/recovery/ai
-```
 
-Runs the AI-assisted recovery benchmark and returns aggregate metrics together with transaction-level audit information.
+Runs the AI-assisted recovery benchmark and returns aggregate recovery metrics together with transaction-level audit information.
 
-### Baseline endpoint
+Deterministic baseline
 
-```http
 GET /api/recovery
-```
 
-Provides the deterministic baseline recovery metrics.
+Provides deterministic baseline recovery metrics.
 
----
+Graph statistics
 
-## 🖥️ Running Locally
+GET /api/graph/stats
 
-### 1. Start the backend
+Provides graph-level counts and distributions.
 
-From the project root:
+Summary
 
-```bash
-cd OMNIX-main
-```
+GET /api/summary
 
-Then:
+Combines graph statistics with evidence-layer counts such as claims and sources.
 
-```bash
-.\.venv\Scripts\python.exe -m omnix.server
-```
+🧪 Simulation Environment
 
-The FastAPI backend will start locally.
+Revora uses a simulated payment environment.
 
-### 2. Start the frontend
+The executor does not process real payments.
 
-Open another terminal:
+Instead, the simulator uses the generated payment dataset's recoverability state to determine whether a simulated retry succeeds.
 
-```bash
-cd frontend
-```
+Payment Failed
+      ↓
+AI Recommends Retry
+      ↓
+Evidence Passes
+      ↓
+Policy Passes
+      ↓
+Bounded Executor
+      ↓
+Simulated Retry
+      ↓
+Success / Failure
+      ↓
+Metrics + Audit
 
-Install dependencies if required:
+This gives the system measurable outcomes without moving real money.
 
-```bash
-npm install
-```
+📈 Example Benchmark
 
-Start the development server:
+A representative dashboard run can show metrics such as:
 
-```bash
-npm run dev
-```
+1,000 payments
+252 failed payments
+₹9.4L+ revenue at risk
+AI-assisted incremental recovery
+0 false approvals in the displayed run
 
-Then open:
+The exact numbers may vary between benchmark runs because the payment dataset is generated by the simulator.
 
-```text
-http://localhost:5173/
-```
+All revenue figures shown by Revora are simulated benchmark results, not real payment processing or real customer funds.
 
----
+🎬 Suggested Hackathon Demo
 
-## 🎬 Demo Flow
+A strong demo can be structured as a short story instead of a feature tour.
 
-A short demo can follow this sequence:
+01 — Start with the problem
 
-### 1. Open Revora
+“A failed payment is not necessarily lost revenue.”
 
-Show the Revenue Recovery workspace and explain the revenue-at-risk problem.
+Show the recovery dashboard and revenue at risk.
 
-### 2. Show the benchmark
+02 — Show the AI decision
 
-Point out:
+Open a candidate and show:
 
-- payment batch size
-- failed payments
-- revenue at risk
-- baseline recovery
-- AI incremental recovery
+failure reason
 
-### 3. Show the AI decision pipeline
+AI diagnosis
 
-```text
-Detect
-  ↓
-AI Diagnosis
-  ↓
-Evidence Verification
-  ↓
-Policy Authorization
-  ↓
-Execute
-```
+recommendation
 
-### 4. Show a transaction-level decision
+confidence
 
-Open the Recovery Decisions section and demonstrate:
+03 — Prove the safety boundary
 
-- failure reason
-- AI recommendation
-- confidence
-- policy decision
-- recovery result
+Show:
 
-### 5. Show the audit trail
+AI
+ ↓
+Evidence
+ ↓
+Policy
+ ↓
+Executor
 
-Explain that the system records the evidence, rules checked, authorization result, and execution result.
+Explain that the model cannot directly execute the payment action.
 
-### 6. Show stopping rules
+04 — Show a blocked case
 
-Demonstrate that unsafe or unsupported actions are escalated instead of automatically executed.
+Pick a transaction that violates a policy:
 
-### 7. End with measured recovery
+High amount
+   ↓
+Policy blocked
+   ↓
+Manual review
 
-Compare baseline recovery against AI-assisted incremental recovery.
+This is one of the most important trust moments in the demo.
 
----
+05 — Show a successful recovery
 
-## 🔐 Design Principles
+Demonstrate:
 
-Revora follows five core principles:
+Failure
+ ↓
+Diagnosis
+ ↓
+Evidence
+ ↓
+Authorization
+ ↓
+Retry
+ ↓
+Recovered revenue
 
-### 1. AI recommends, not executes
+06 — Open the Decision Graph
+
+Show the interactive graph and switch between:
+
+Network
+
+Clusters
+
+Orbit
+
+Use selection, filters, focus and path tracing to demonstrate how decisions and evidence connect.
+
+07 — End on measurable impact
+
+Compare:
+
+Deterministic Baseline
+        vs
+AI-Assisted Recovery
+
+Then show:
+
+incremental revenue
+
+recovery rate
+
+precision
+
+recall
+
+F1
+
+false approvals
+
+The final message:
+
+Revora doesn't just predict recovery. It makes recovery decisions measurable, explainable and bounded.
+
+🏆 Why Revora Is Different
+
+Most payment-recovery demos stop at:
+
+Failed payment
+      ↓
+ML prediction
+      ↓
+Retry
+
+Revora goes further:
+
+Failed payment
+      ↓
+Detect opportunity
+      ↓
+Diagnose failure with AI
+      ↓
+Verify evidence
+      ↓
+Apply deterministic policy
+      ↓
+Bound the execution
+      ↓
+Escalate unsafe cases
+      ↓
+Simulate the outcome
+      ↓
+Measure incremental revenue
+      ↓
+Audit every decision
+
+That distinction matters.
+
+The system is designed around financial workflow safety, not merely model accuracy.
+
+🔐 Five Design Principles
+
+1. AI recommends, not executes
 
 The model cannot directly move money.
 
-### 2. Evidence before action
+2. Evidence before action
 
-An AI recommendation must be supported by deterministic checks.
+A recommendation must pass deterministic checks.
 
-### 3. Policy before execution
+3. Policy before execution
 
-Even a high-confidence recommendation can be blocked by business or safety rules.
+Confidence alone is never sufficient authorization.
 
-### 4. Bounded execution
+4. Bounded execution
 
-Retries, transaction amounts, and supported actions are explicitly constrained.
+Actions, retries and transaction amounts are explicitly constrained.
 
-### 5. Every decision is auditable
+5. Every decision is auditable
 
-The system records why a recovery was attempted, blocked, or escalated.
+The system records why a recovery was attempted, blocked or escalated.
 
----
+🛠️ Tech Stack
 
-## ⚠️ Current Limitations
+Layer
 
-Revora is a hackathon prototype and intentionally uses a simulated recovery environment.
+Technology
 
-Current limitations include:
+Frontend
 
-- no real payment gateway execution
-- no production payment credentials
-- no persistent cross-request idempotency store
-- simulated payment outcomes
-- AI candidate evaluation is bounded for benchmark/runtime control
-- manual review is represented by the system's decision state rather than a production operations queue
+React + TypeScript
 
-These boundaries are intentional for safe demonstration and evaluation.
+Build tool
 
----
+Vite
 
-## 🚀 Why This Fits AI Revenue Recovery
+Backend
 
-Revora addresses the complete revenue recovery loop:
+Python + FastAPI
 
-```text
-Detect revenue at risk
-        ↓
-Understand the failure
-        ↓
-Choose an intervention
-        ↓
-Verify the recommendation
-        ↓
-Authorize against policy
-        ↓
-Execute safely
-        ↓
-Measure recovered revenue
-        ↓
-Record an audit trail
-```
+AI layer
 
-The system therefore goes beyond simply predicting payment recovery.
+AI-assisted payment diagnosis
 
-It demonstrates how an AI agent can operate inside a **bounded financial workflow with measurable outcomes and explicit safety controls**.
+Recovery engine
 
----
+Python simulation
 
-## 🧰 Tech Stack
+Policy engine
 
-| Layer | Technology |
-|---|---|
-| Frontend | React + TypeScript |
-| Build tool | Vite |
-| Backend | Python + FastAPI |
-| AI layer | AI-assisted payment diagnosis |
-| Recovery engine | Python simulation |
-| Policy engine | Deterministic rule-based authorization |
-| Evidence layer | Deterministic verification |
-| Execution | Simulated bounded recovery |
-| Visualization | React dashboard |
+Deterministic rule-based authorization
 
----
+Evidence layer
 
-## 📁 Project Structure
+Deterministic verification
 
-```text
-project/
+Execution
+
+Simulated bounded recovery
+
+Visualization
+
+Interactive React intelligence workspace
+
+Graph rendering
+
+Interactive Network / Orbit visualization
+
+▶️ Running Locally
+
+1. Start the backend
+
+From the project root:
+
+cd OMNIX-main
+
+Then:
+
+.\.venv\Scripts\python.exe -m omnix.server
+
+The FastAPI backend starts locally.
+
+2. Start the frontend
+
+Open another terminal:
+
+cd frontend
+
+Install dependencies if required:
+
+npm install
+
+Start the development server:
+
+npm run dev
+
+Then open:
+
+http://localhost:5173/
+
+📁 High-Level Project Structure
+
+OMNIX-main/
+│
 ├── frontend/
 │   └── src/
-│       └── workspace/
-│           └── views/
-│               └── Recovery.tsx
+│       ├── components/
+│       ├── lib/
+│       ├── store/
+│       └── views/
 │
 ├── omnix/
 │   ├── server.py
@@ -586,27 +1127,71 @@ project/
 │       └── simulator.py
 │
 └── README.md
-```
 
----
+⚠️ Current Prototype Boundaries
 
-## 📌 Hackathon Positioning
+Revora is a hackathon prototype and intentionally uses a simulated recovery environment.
 
-**Product:** Revora
+Current boundaries include:
 
-**Track:** AI Revenue Recovery
+no live payment gateway execution
 
-**Category:** AI-assisted financial workflow automation
+no production payment credentials
 
-**Core capability:**
+simulated payment outcomes
 
-> Detect recoverable revenue, diagnose failed payments, apply evidence and policy gates, execute bounded recovery actions, and measure the resulting recovery.
+no persistent cross-request idempotency store
 
----
+bounded AI candidate evaluation for runtime/benchmark control
 
-## ⚖️ Disclaimer
+manual review represented as a decision state rather than a production operations queue
 
-Revora is a hackathon prototype using simulated payment data and simulated recovery execution.
+These limitations are intentional.
 
-It does not process real payments, access real customer funds, or execute live financial transactions.
+They keep the demonstration safe while preserving the architecture needed for a production-grade evolution.
 
+🚀 Future Production Path
+
+The architecture naturally leaves room for a production deployment path:
+
+SIMULATED PAYMENT DATA
+        ↓
+REAL PAYMENT EVENTS
+        ↓
+RECOVERY SCORING
+        ↓
+AI DIAGNOSIS
+        ↓
+EVIDENCE + POLICY
+        ↓
+PRODUCTION-SAFE EXECUTOR
+        ↓
+PAYMENT GATEWAY
+        ↓
+OBSERVED OUTCOME
+        ↓
+CONTINUOUS EVALUATION
+
+Potential production extensions include:
+
+real payment event ingestion
+
+production-grade idempotency storage
+
+operational manual-review queues
+
+richer recovery action allowlists
+
+merchant-specific policies
+
+stronger observability
+
+offline model evaluation
+
+policy versioning
+
+human feedback loops
+
+experiment management
+
+production authentication and authorization

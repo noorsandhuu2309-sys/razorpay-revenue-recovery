@@ -299,8 +299,56 @@ export function GraphView() {
 
   const noEdges = !!model && model.nodes.length > 1 && model.edges.length === 0
 
+  // Data-driven visual telemetry. This describes the current filtered graph;
+  // it does not create or invent graph objects.
+  const graphTelemetry = useMemo(() => {
+    if (!model) {
+      return {
+        nodes: 0, edges: 0, communities: 0, density: 0,
+        strongest: null as { name: string; score: number } | null,
+        families: [] as { label: string; count: number; color: string; shape: string }[],
+      }
+    }
+
+    const totalPairs = Math.max(1, model.nodes.length * (model.nodes.length - 1) / 2)
+    const density = Math.min(100, (model.edges.length / totalPairs) * 100)
+    const ranked = [...model.nodes]
+      .map((n) => ({
+        name: n.o.name,
+        score: model.adjacency.get(n.o.id)?.size ?? 0,
+      }))
+      .sort((a, b) => b.score - a.score)
+
+    return {
+      nodes: model.nodes.length,
+      edges: model.edges.length,
+      communities: graph?.communities?.length ?? 0,
+      density,
+      strongest: ranked[0] ?? null,
+      families: model.legend.slice(0, 6),
+    }
+  }, [model, graph?.communities])
+
+  const signalPulse = loading ? 'SYNCING' : filtersActive(filters) ? 'FILTERED' : 'LIVE'
+
   return (
     <div className={`omx-graph-stage ${fullscreen ? 'fullscreen' : ''}`}>
+      <DecisionGraphHUD
+        mode={mode}
+        signalPulse={signalPulse}
+        telemetry={graphTelemetry}
+        focusMode={focusMode}
+        selectedCount={selected.length}
+        pathActive={!!path && path.length > 1}
+      />
+
+      <div className="omx-decision-lanes" aria-hidden="true">
+        <div className="omx-decision-lane lane-risk"><span>FAILURE SIGNAL</span><i /></div>
+        <div className="omx-decision-lane lane-ai"><span>AI DIAGNOSIS</span><i /></div>
+        <div className="omx-decision-lane lane-evidence"><span>EVIDENCE</span><i /></div>
+        <div className="omx-decision-lane lane-policy"><span>POLICY</span><i /></div>
+        <div className="omx-decision-lane lane-outcome"><span>RECOVERY OUTCOME</span><i /></div>
+      </div>
       {model && (mode === 'network' || mode === 'clusters') && (
         <NetworkCanvas
           // Remounting on layout change is deliberate: the cluster force can
@@ -515,6 +563,119 @@ export function GraphView() {
     </div>
   )
 }
+
+
+/**
+ * Visual telemetry layer for the ReVora decision graph.
+ * The real graph remains NetworkCanvas/Orbit; this layer only visualises
+ * the already-filtered model and current interaction state.
+ */
+function DecisionGraphHUD({
+  mode,
+  signalPulse,
+  telemetry,
+  focusMode,
+  selectedCount,
+  pathActive,
+}: {
+  mode: 'orbit' | 'network' | 'clusters'
+  signalPulse: string
+  telemetry: {
+    nodes: number
+    edges: number
+    communities: number
+    density: number
+    strongest: { name: string; score: number } | null
+    families: { label: string; count: number; color: string; shape: string }[]
+  }
+  focusMode: boolean
+  selectedCount: number
+  pathActive: boolean
+}) {
+  const modeLabel =
+    mode === 'network'
+      ? 'NETWORK INTELLIGENCE'
+      : mode === 'clusters'
+        ? 'COMMUNITY INTELLIGENCE'
+        : 'OBJECT RELATIONSHIP'
+
+  return (
+    <>
+      <div className="omx-decision-header" aria-hidden="true">
+        <div className="omx-decision-brand">
+          <span className="pulse" />
+          <div>
+            <strong>REVORA</strong>
+            <span>RECOVERY DECISION GRAPH</span>
+          </div>
+        </div>
+
+        <div className="omx-decision-route">
+          <span>PAYMENT</span><b>→</b><span>DIAGNOSIS</span><b>→</b>
+          <span>EVIDENCE</span><b>→</b><span>POLICY</span><b>→</b><span>OUTCOME</span>
+        </div>
+
+        <div className="omx-decision-state">
+          <span className="state-dot" />{signalPulse}
+        </div>
+      </div>
+
+      <div className="omx-decision-radar" aria-hidden="true">
+        <span className="ring r1" />
+        <span className="ring r2" />
+        <span className="ring r3" />
+        <span className="cross horizontal" />
+        <span className="cross vertical" />
+        <span className="radar-label top">RECOVERY INTELLIGENCE</span>
+        <span className="radar-label bottom">{modeLabel}</span>
+      </div>
+
+      <div className="omx-decision-metrics" aria-hidden="true">
+        <div className="metric"><span>OBJECTS</span><strong>{telemetry.nodes}</strong></div>
+        <div className="metric"><span>RELATIONSHIPS</span><strong>{telemetry.edges}</strong></div>
+        <div className="metric"><span>COMMUNITIES</span><strong>{telemetry.communities}</strong></div>
+        <div className="metric"><span>DENSITY</span><strong>{telemetry.density.toFixed(1)}%</strong></div>
+        <div className={`metric ${selectedCount ? 'active' : ''}`}><span>SELECTED</span><strong>{selectedCount}</strong></div>
+      </div>
+
+      <div className="omx-decision-signal-stack" aria-hidden="true">
+        <div className="signal-title"><span>DECISION SIGNALS</span><i /></div>
+        {telemetry.families.map((family, index) => (
+          <div className="signal-row" key={family.label}>
+            <span className="signal-shape" style={{ color: family.color }}>
+              {family.shape === 'diamond' ? '◆' : family.shape === 'square' ? '■'
+                : family.shape === 'triangle' ? '▲' : family.shape === 'hexagon' ? '⬢'
+                  : family.shape === 'pentagon' ? '⬟' : '●'}
+            </span>
+            <span className="signal-name">{family.label}</span>
+            <span className="signal-count">{family.count}</span>
+            <span className="signal-bar">
+              <i style={{
+                width: `${Math.min(100, Math.max(8, (family.count / Math.max(1, telemetry.nodes)) * 100))}%`,
+                background: family.color,
+              }} />
+            </span>
+            <span className="signal-index">{String(index + 1).padStart(2, '0')}</span>
+          </div>
+        ))}
+        {telemetry.strongest && (
+          <div className="signal-anchor">
+            <span>HIGHEST CONNECTIVITY</span>
+            <strong>{telemetry.strongest.name}</strong>
+            <small>{telemetry.strongest.score} direct links</small>
+          </div>
+        )}
+      </div>
+
+      <div className="omx-decision-bottom-status" aria-hidden="true">
+        <span className={focusMode ? 'hot' : ''}>{focusMode ? 'FOCUS LENS ACTIVE' : 'FULL GRAPH CONTEXT'}</span>
+        <span className={pathActive ? 'hot' : ''}>{pathActive ? 'PATH TRACE ACTIVE' : 'PATH TRACE READY'}</span>
+        <span>TRUST-CALIBRATED</span>
+      </div>
+    </>
+  )
+}
+
 
 /** The hover readout, isolated in its own component on purpose.
  *

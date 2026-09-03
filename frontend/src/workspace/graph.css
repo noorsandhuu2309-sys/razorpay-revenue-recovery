@@ -447,3 +447,918 @@ body.omx-graph-fullscreen .omx-canvas {
 @container omxgraph (max-width: 880px) {
   .omx-graph-find { max-width: calc(100% - 248px); }
 }
+
+
+/* =========================================================================
+   REVORA DECISION GRAPH — VISUAL UPGRADE
+   -------------------------------------------------------------------------
+   Purpose:
+   - Turn the existing decision graph into a dense, cinematic intelligence map.
+   - Preserve existing graph interactions, controls, filters, selection and
+     fullscreen behaviour.
+   - Add visual hierarchy for payment -> diagnosis -> evidence -> policy ->
+     outcome without requiring a change to the underlying data model.
+   - If the renderer exposes React Flow/SVG node classes, those are enhanced
+     below as well. Unknown selectors simply do nothing.
+
+   Design language:
+   deep-black intelligence workspace / luminous evidence trails /
+   cyan information / violet AI reasoning / amber policy / red risk /
+   green recovery.
+   ========================================================================= */
+
+/* -- graph-specific colour tokens ----------------------------------------- */
+.omx-graph-stage {
+  --rv-bg-0: #050608;
+  --rv-bg-1: #090c11;
+  --rv-bg-2: #0d1219;
+  --rv-grid: rgba(120, 150, 190, 0.075);
+  --rv-grid-strong: rgba(120, 150, 190, 0.13);
+
+  --rv-cyan: #48d9ff;
+  --rv-cyan-soft: rgba(72, 217, 255, 0.16);
+  --rv-violet: #a77cff;
+  --rv-violet-soft: rgba(167, 124, 255, 0.16);
+  --rv-amber: #ffc85a;
+  --rv-amber-soft: rgba(255, 200, 90, 0.15);
+  --rv-red: #ff5f68;
+  --rv-red-soft: rgba(255, 95, 104, 0.15);
+  --rv-green: #50e39a;
+  --rv-green-soft: rgba(80, 227, 154, 0.15);
+  --rv-blue: #6b8cff;
+  --rv-blue-soft: rgba(107, 140, 255, 0.15);
+  --rv-pink: #ff73c8;
+  --rv-pink-soft: rgba(255, 115, 200, 0.14);
+
+  --rv-text: #e9eef7;
+  --rv-text-2: #a9b4c5;
+  --rv-text-3: #697589;
+  --rv-line: rgba(190, 210, 235, 0.13);
+  --rv-line-hot: rgba(190, 210, 235, 0.25);
+}
+
+/* =========================================================================
+   1. THE GRAPH STAGE
+   ========================================================================= */
+
+.omx-graph-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(56, 78, 116, 0.12), transparent 38%),
+    radial-gradient(circle at 18% 20%, rgba(72, 217, 255, 0.055), transparent 25%),
+    radial-gradient(circle at 82% 72%, rgba(167, 124, 255, 0.045), transparent 27%),
+    linear-gradient(180deg, var(--rv-bg-1), var(--rv-bg-0));
+}
+
+/* Technical graph paper underneath the network. */
+.omx-graph-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.8;
+  background-image:
+    linear-gradient(to right, var(--rv-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rv-grid) 1px, transparent 1px),
+    linear-gradient(to right, var(--rv-grid-strong) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--rv-grid-strong) 1px, transparent 1px);
+  background-size: 32px 32px, 32px 32px, 160px 160px, 160px 160px;
+  mask-image: linear-gradient(to bottom, transparent, black 12%, black 88%, transparent);
+}
+
+/* Subtle radial focus / radar sweep effect. */
+.omx-graph-stage::after {
+  content: "";
+  position: absolute;
+  width: min(62vw, 760px);
+  aspect-ratio: 1;
+  left: 50%;
+  top: 51%;
+  z-index: 0;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border: 1px solid rgba(72, 217, 255, 0.045);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 80px rgba(72, 217, 255, 0.018),
+    0 0 0 160px rgba(167, 124, 255, 0.014),
+    0 0 0 240px rgba(255, 200, 90, 0.01);
+}
+
+/* Keep actual drawing layers above the decorative stage background. */
+.omx-graph-stage > canvas,
+.omx-graph-stage > svg,
+.omx-graph-stage .omx-canvas,
+.omx-graph-stage .react-flow,
+.omx-graph-stage .react-flow__renderer {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================================================
+   2. SVG / EDGE NETWORK
+   ========================================================================= */
+
+/* If ReVora's graph uses SVG edges, make the network feel alive without
+   stealing pointer events from the real graph. */
+.omx-graph-stage svg {
+  overflow: visible;
+}
+
+.omx-graph-stage svg path {
+  vector-effect: non-scaling-stroke;
+}
+
+.omx-graph-stage .react-flow__edge-path {
+  stroke: rgba(132, 157, 190, 0.42);
+  stroke-width: 1.25px;
+  transition:
+    stroke 160ms ease,
+    stroke-width 160ms ease,
+    opacity 160ms ease;
+}
+
+.omx-graph-stage .react-flow__edge:hover .react-flow__edge-path,
+.omx-graph-stage .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--rv-cyan);
+  stroke-width: 2.2px;
+  filter: drop-shadow(0 0 5px rgba(72, 217, 255, 0.45));
+}
+
+.omx-graph-stage .react-flow__edge-text {
+  fill: var(--rv-text-2);
+  font-family: var(--omx-mono);
+  font-size: 9px;
+}
+
+/* Arrowheads / markers become high-contrast but remain small. */
+.omx-graph-stage svg marker path {
+  fill: rgba(150, 174, 205, 0.68);
+}
+
+/* Generic graph edge selectors for SVG renderers that don't use React Flow. */
+.omx-graph-stage .edge,
+.omx-graph-stage .graph-edge,
+.omx-graph-stage .omx-edge {
+  opacity: 0.68;
+  transition: opacity 160ms ease, filter 160ms ease;
+}
+
+.omx-graph-stage .edge:hover,
+.omx-graph-stage .graph-edge:hover,
+.omx-graph-stage .omx-edge:hover {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(72, 217, 255, 0.32));
+}
+
+/* =========================================================================
+   3. NODE SURFACES
+   ========================================================================= */
+
+/* React Flow-compatible node treatment. */
+.omx-graph-stage .react-flow__node {
+  color: var(--rv-text);
+  font-family: var(--omx-sans, Inter, system-ui, sans-serif);
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.32));
+  transition:
+    transform 180ms ease,
+    filter 180ms ease,
+    opacity 180ms ease;
+}
+
+.omx-graph-stage .react-flow__node:hover {
+  filter:
+    drop-shadow(0 12px 28px rgba(0, 0, 0, 0.46))
+    drop-shadow(0 0 14px rgba(72, 217, 255, 0.12));
+  z-index: 20;
+}
+
+.omx-graph-stage .react-flow__node.selected {
+  filter:
+    drop-shadow(0 12px 28px rgba(0, 0, 0, 0.48))
+    drop-shadow(0 0 18px rgba(72, 217, 255, 0.24));
+}
+
+/* Generic node hooks. These are safe no-ops when the renderer doesn't expose
+   these classes. */
+.omx-graph-stage .graph-node,
+.omx-graph-stage .omx-graph-node,
+.omx-graph-stage .decision-node,
+.omx-graph-stage .omx-decision-node {
+  position: relative;
+  overflow: visible;
+  border: 1px solid rgba(170, 195, 225, 0.17);
+  border-radius: 12px;
+  background:
+    linear-gradient(145deg, rgba(19, 25, 34, 0.96), rgba(8, 11, 16, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 14px 34px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(12px);
+}
+
+/* A tiny status light on compatible node cards. */
+.omx-graph-stage .graph-node::before,
+.omx-graph-stage .omx-graph-node::before,
+.omx-graph-stage .decision-node::before,
+.omx-graph-stage .omx-decision-node::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rv-cyan);
+  box-shadow: 0 0 10px rgba(72, 217, 255, 0.75);
+  pointer-events: none;
+}
+
+/* =========================================================================
+   4. DECISION-PIPELINE COLOUR LANGUAGE
+   -------------------------------------------------------------------------
+   Use these classes in the renderer when available:
+     .payment / .failure
+     .candidate / .recovery
+     .diagnosis / .ai
+     .evidence / .verification
+     .policy / .authorization
+     .outcome / .success
+   ========================================================================= */
+
+.omx-graph-stage .payment,
+.omx-graph-stage .failure,
+.omx-graph-stage [data-stage="payment"],
+.omx-graph-stage [data-stage="failure"] {
+  --rv-node-accent: var(--rv-red);
+  --rv-node-soft: var(--rv-red-soft);
+}
+
+.omx-graph-stage .candidate,
+.omx-graph-stage .recovery,
+.omx-graph-stage [data-stage="candidate"],
+.omx-graph-stage [data-stage="recovery"] {
+  --rv-node-accent: var(--rv-cyan);
+  --rv-node-soft: var(--rv-cyan-soft);
+}
+
+.omx-graph-stage .diagnosis,
+.omx-graph-stage .ai,
+.omx-graph-stage [data-stage="diagnosis"],
+.omx-graph-stage [data-stage="ai"] {
+  --rv-node-accent: var(--rv-violet);
+  --rv-node-soft: var(--rv-violet-soft);
+}
+
+.omx-graph-stage .evidence,
+.omx-graph-stage .verification,
+.omx-graph-stage [data-stage="evidence"],
+.omx-graph-stage [data-stage="verification"] {
+  --rv-node-accent: var(--rv-blue);
+  --rv-node-soft: var(--rv-blue-soft);
+}
+
+.omx-graph-stage .policy,
+.omx-graph-stage .authorization,
+.omx-graph-stage [data-stage="policy"],
+.omx-graph-stage [data-stage="authorization"] {
+  --rv-node-accent: var(--rv-amber);
+  --rv-node-soft: var(--rv-amber-soft);
+}
+
+.omx-graph-stage .outcome,
+.omx-graph-stage .success,
+.omx-graph-stage [data-stage="outcome"],
+.omx-graph-stage [data-stage="success"] {
+  --rv-node-accent: var(--rv-green);
+  --rv-node-soft: var(--rv-green-soft);
+}
+
+/* Accent compatible cards. */
+.omx-graph-stage .payment,
+.omx-graph-stage .failure,
+.omx-graph-stage .candidate,
+.omx-graph-stage .recovery,
+.omx-graph-stage .diagnosis,
+.omx-graph-stage .ai,
+.omx-graph-stage .evidence,
+.omx-graph-stage .verification,
+.omx-graph-stage .policy,
+.omx-graph-stage .authorization,
+.omx-graph-stage .outcome,
+.omx-graph-stage .success,
+.omx-graph-stage [data-stage] {
+  border-color: color-mix(in srgb, var(--rv-node-accent) 42%, transparent);
+  background:
+    linear-gradient(145deg,
+      color-mix(in srgb, var(--rv-node-soft) 72%, #0b0f15),
+      rgba(7, 10, 15, 0.97));
+}
+
+.omx-graph-stage .payment::before,
+.omx-graph-stage .failure::before,
+.omx-graph-stage .candidate::before,
+.omx-graph-stage .recovery::before,
+.omx-graph-stage .diagnosis::before,
+.omx-graph-stage .ai::before,
+.omx-graph-stage .evidence::before,
+.omx-graph-stage .verification::before,
+.omx-graph-stage .policy::before,
+.omx-graph-stage .authorization::before,
+.omx-graph-stage .outcome::before,
+.omx-graph-stage .success::before,
+.omx-graph-stage [data-stage]::before {
+  background: var(--rv-node-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--rv-node-accent) 75%, transparent);
+}
+
+/* =========================================================================
+   5. THE CURRENT REVORA DECISION CARDS
+   -------------------------------------------------------------------------
+   The existing interface in the supplied screenshot uses a horizontal
+   Payment failed -> Recovery candidate -> AI diagnosis -> Evidence
+   verification -> Policy authorization -> Simulated outcome path.
+
+   These selectors deliberately target common card/container hooks while
+   avoiding global .card/.panel rules that could damage the rest of ReVora.
+   ========================================================================= */
+
+.omx-graph-stage .omx-decision-path,
+.omx-graph-stage .omx-recovery-path,
+.omx-graph-stage .omx-decision-graph,
+.omx-graph-stage .decision-graph {
+  position: relative;
+  isolation: isolate;
+}
+
+/* Give a path container a subtle "command centre" treatment. */
+.omx-graph-stage .omx-decision-path::before,
+.omx-graph-stage .omx-recovery-path::before,
+.omx-graph-stage .omx-decision-graph::before,
+.omx-graph-stage .decision-graph::before {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 15% 50%, rgba(255, 95, 104, 0.055), transparent 20%),
+    radial-gradient(circle at 42% 50%, rgba(72, 217, 255, 0.055), transparent 20%),
+    radial-gradient(circle at 62% 50%, rgba(167, 124, 255, 0.055), transparent 20%),
+    radial-gradient(circle at 83% 50%, rgba(80, 227, 154, 0.045), transparent 20%);
+}
+
+/* Common step/card hooks. */
+.omx-graph-stage .decision-step,
+.omx-graph-stage .omx-decision-step,
+.omx-graph-stage .recovery-step,
+.omx-graph-stage .omx-recovery-step,
+.omx-graph-stage .path-node,
+.omx-graph-stage .omx-path-node {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(175, 198, 226, 0.15);
+  background:
+    linear-gradient(150deg, rgba(21, 27, 37, 0.98), rgba(8, 11, 16, 0.98));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 26px rgba(0, 0, 0, 0.34);
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.omx-graph-stage .decision-step:hover,
+.omx-graph-stage .omx-decision-step:hover,
+.omx-graph-stage .recovery-step:hover,
+.omx-graph-stage .omx-recovery-step:hover,
+.omx-graph-stage .path-node:hover,
+.omx-graph-stage .omx-path-node:hover {
+  transform: translateY(-2px);
+  border-color: rgba(72, 217, 255, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 15px 32px rgba(0, 0, 0, 0.44),
+    0 0 22px rgba(72, 217, 255, 0.08);
+}
+
+/* =========================================================================
+   6. CONNECTION / TRANSITION LAYER
+   ========================================================================= */
+
+/* Compatible HTML connector. */
+.omx-graph-stage .decision-connector,
+.omx-graph-stage .omx-decision-connector,
+.omx-graph-stage .path-connector,
+.omx-graph-stage .omx-path-connector {
+  position: relative;
+  flex: 1 1 30px;
+  min-width: 28px;
+  height: 1px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 95, 104, 0.45),
+      rgba(72, 217, 255, 0.65),
+      rgba(167, 124, 255, 0.55),
+      rgba(255, 200, 90, 0.58),
+      rgba(80, 227, 154, 0.52)
+    );
+  box-shadow: 0 0 9px rgba(72, 217, 255, 0.16);
+}
+
+.omx-graph-stage .decision-connector::after,
+.omx-graph-stage .omx-decision-connector::after,
+.omx-graph-stage .path-connector::after,
+.omx-graph-stage .omx-path-connector::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateY(-50%) rotate(45deg);
+  border-top: 1px solid rgba(72, 217, 255, 0.75);
+  border-right: 1px solid rgba(72, 217, 255, 0.75);
+}
+
+/* Dashed / uncertain route. */
+.omx-graph-stage .decision-connector.dashed,
+.omx-graph-stage .omx-decision-connector.dashed,
+.omx-graph-stage [data-certainty="inferred"] {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(167, 124, 255, 0.62) 0 7px,
+      transparent 7px 13px
+    );
+}
+
+/* Corroborated route. */
+.omx-graph-stage [data-certainty="corroborated"],
+.omx-graph-stage .corroborated {
+  box-shadow: 0 0 10px rgba(80, 227, 154, 0.18);
+}
+
+/* =========================================================================
+   7. MINI MAP / OVERVIEW
+   ========================================================================= */
+
+.omx-graph-stage .react-flow__minimap,
+.omx-graph-stage .minimap,
+.omx-graph-stage .omx-minimap {
+  border: 1px solid rgba(170, 195, 225, 0.16);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(6, 9, 13, 0.86);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+}
+
+/* =========================================================================
+   8. TOOLBAR — INTELLIGENCE CONSOLE
+   ========================================================================= */
+
+.omx-graph-toolbar {
+  background:
+    linear-gradient(180deg, rgba(19, 24, 32, 0.96), rgba(9, 12, 17, 0.96));
+  border-color: rgba(170, 195, 225, 0.18);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+}
+
+.omx-graph-toolbar .grp {
+  border-color: rgba(170, 195, 225, 0.12);
+}
+
+.omx-graph-toolbar .omx-gbtn {
+  position: relative;
+  border: 1px solid transparent;
+}
+
+.omx-graph-toolbar .omx-gbtn:hover:not(:disabled) {
+  background: rgba(72, 217, 255, 0.08);
+  border-color: rgba(72, 217, 255, 0.15);
+  color: #e9fbff;
+}
+
+.omx-graph-toolbar .omx-gbtn.on {
+  background:
+    linear-gradient(180deg, rgba(72, 217, 255, 0.16), rgba(72, 217, 255, 0.07));
+  border-color: rgba(72, 217, 255, 0.26);
+  color: var(--rv-cyan);
+  box-shadow: inset 0 0 14px rgba(72, 217, 255, 0.05);
+}
+
+.omx-graph-toolbar .omx-gseg {
+  border: 1px solid transparent;
+}
+
+.omx-graph-toolbar .omx-gseg:hover {
+  background: rgba(167, 124, 255, 0.08);
+  color: #f2edff;
+}
+
+.omx-graph-toolbar .omx-gseg.on {
+  background:
+    linear-gradient(180deg, rgba(167, 124, 255, 0.18), rgba(167, 124, 255, 0.07));
+  border-color: rgba(167, 124, 255, 0.28);
+  color: #d8c8ff;
+}
+
+/* =========================================================================
+   9. LEGEND — NODE VOCABULARY
+   ========================================================================= */
+
+.omx-graph-legend {
+  background:
+    linear-gradient(155deg, rgba(17, 22, 30, 0.96), rgba(8, 11, 16, 0.96));
+  border: 1px solid rgba(170, 195, 225, 0.16);
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(15px);
+}
+
+.omx-graph-legend .lhead {
+  min-height: 22px;
+}
+
+.omx-graph-legend .lhead .chev {
+  color: var(--rv-cyan);
+}
+
+.omx-graph-legend .ln {
+  box-shadow: 0 0 8px currentColor;
+}
+
+/* Colour legend swatches when semantic classes/data attributes are present. */
+.omx-graph-legend [data-stage="payment"],
+.omx-graph-legend .payment {
+  color: var(--rv-red);
+}
+
+.omx-graph-legend [data-stage="recovery"],
+.omx-graph-legend .recovery {
+  color: var(--rv-cyan);
+}
+
+.omx-graph-legend [data-stage="diagnosis"],
+.omx-graph-legend .diagnosis {
+  color: var(--rv-violet);
+}
+
+.omx-graph-legend [data-stage="evidence"],
+.omx-graph-legend .evidence {
+  color: var(--rv-blue);
+}
+
+.omx-graph-legend [data-stage="policy"],
+.omx-graph-legend .policy {
+  color: var(--rv-amber);
+}
+
+.omx-graph-legend [data-stage="outcome"],
+.omx-graph-legend .outcome {
+  color: var(--rv-green);
+}
+
+/* =========================================================================
+   10. FILTER / FIND PANELS
+   ========================================================================= */
+
+.omx-graph-filters,
+.omx-graph-find {
+  background:
+    linear-gradient(155deg, rgba(17, 22, 30, 0.98), rgba(7, 10, 15, 0.98));
+  border-color: rgba(170, 195, 225, 0.18);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(18px);
+}
+
+.omx-graph-filters .frow:hover {
+  color: var(--rv-text);
+  background: rgba(72, 217, 255, 0.045);
+}
+
+.omx-graph-filters input[type="checkbox"] {
+  accent-color: var(--rv-cyan);
+}
+
+.omx-graph-filters input[type="range"] {
+  accent-color: var(--rv-violet);
+}
+
+.omx-graph-find .frow-hit:hover {
+  background:
+    linear-gradient(90deg, rgba(72, 217, 255, 0.09), rgba(167, 124, 255, 0.05));
+  border-color: rgba(72, 217, 255, 0.22);
+}
+
+/* =========================================================================
+   11. PATH / HOVER READOUTS
+   ========================================================================= */
+
+.omx-graph-path,
+.omx-graph-hover,
+.omx-graph-note {
+  background:
+    linear-gradient(155deg, rgba(17, 22, 30, 0.96), rgba(7, 10, 15, 0.96));
+  border-color: rgba(170, 195, 225, 0.16);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(15px);
+}
+
+.omx-graph-path .pl {
+  color: var(--rv-cyan);
+}
+
+.omx-graph-hover .hh strong {
+  color: var(--rv-text);
+}
+
+.omx-graph-hover .hh .g {
+  color: var(--rv-cyan);
+}
+
+/* =========================================================================
+   12. RELATIONSHIP INSPECTOR
+   ========================================================================= */
+
+.omx-rel-claim {
+  background:
+    linear-gradient(145deg, rgba(22, 27, 37, 0.94), rgba(8, 11, 16, 0.96));
+  border-color: rgba(170, 195, 225, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.omx-rel-claim .ep:hover {
+  color: var(--rv-cyan);
+}
+
+.omx-rel-claim .arrow {
+  color: var(--rv-violet);
+  text-shadow: 0 0 8px rgba(167, 124, 255, 0.4);
+}
+
+.omx-src-row .t {
+  color: var(--rv-cyan);
+}
+
+/* =========================================================================
+   13. INSPECTOR / CASE STATUS CHIPS
+   ========================================================================= */
+
+.omx-graph-stage .status,
+.omx-graph-stage .omx-status,
+.omx-graph-stage .badge,
+.omx-graph-stage .omx-badge,
+.omx-graph-stage [data-status] {
+  border: 1px solid rgba(170, 195, 225, 0.15);
+  background: rgba(12, 16, 22, 0.78);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.omx-graph-stage [data-status="risk"],
+.omx-graph-stage [data-status="failed"],
+.omx-graph-stage .risk,
+.omx-graph-stage .failed {
+  color: var(--rv-red);
+  border-color: rgba(255, 95, 104, 0.25);
+  background: rgba(255, 95, 104, 0.075);
+}
+
+.omx-graph-stage [data-status="review"],
+.omx-graph-stage .review {
+  color: var(--rv-amber);
+  border-color: rgba(255, 200, 90, 0.25);
+  background: rgba(255, 200, 90, 0.07);
+}
+
+.omx-graph-stage [data-status="verified"],
+.omx-graph-stage [data-status="recovered"],
+.omx-graph-stage .verified,
+.omx-graph-stage .recovered {
+  color: var(--rv-green);
+  border-color: rgba(80, 227, 154, 0.25);
+  background: rgba(80, 227, 154, 0.07);
+}
+
+.omx-graph-stage [data-status="ai"],
+.omx-graph-stage .ai-status {
+  color: var(--rv-violet);
+  border-color: rgba(167, 124, 255, 0.25);
+  background: rgba(167, 124, 255, 0.07);
+}
+
+/* =========================================================================
+   14. DECISION GRAPH DENSITY HELPERS
+   -------------------------------------------------------------------------
+   These only activate when the renderer supplies the corresponding hooks.
+   They are useful for a richer "network intelligence" presentation:
+   multiple branches, evidence clusters and alternate recovery paths.
+   ========================================================================= */
+
+.omx-graph-stage .branch,
+.omx-graph-stage .graph-branch,
+.omx-graph-stage .decision-branch,
+.omx-graph-stage .omx-decision-branch {
+  position: relative;
+}
+
+.omx-graph-stage .branch::after,
+.omx-graph-stage .graph-branch::after,
+.omx-graph-stage .decision-branch::after,
+.omx-graph-stage .omx-decision-branch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(72, 217, 255, 0.035), transparent 55%);
+}
+
+/* Evidence nodes get a more "data object" silhouette. */
+.omx-graph-stage .evidence-node,
+.omx-graph-stage .omx-evidence-node,
+.omx-graph-stage [data-node-type="evidence"] {
+  border-radius: 9px;
+  border-style: dashed;
+  border-color: rgba(107, 140, 255, 0.38);
+}
+
+/* AI reasoning nodes are slightly more luminous. */
+.omx-graph-stage .ai-node,
+.omx-graph-stage .omx-ai-node,
+.omx-graph-stage [data-node-type="ai"] {
+  border-color: rgba(167, 124, 255, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 0 22px rgba(167, 124, 255, 0.07),
+    0 12px 30px rgba(0, 0, 0, 0.36);
+}
+
+/* Policy nodes get the strongest amber outline. */
+.omx-graph-stage .policy-node,
+.omx-graph-stage .omx-policy-node,
+.omx-graph-stage [data-node-type="policy"] {
+  border-color: rgba(255, 200, 90, 0.4);
+}
+
+/* Outcome/recovery nodes get a clean green endpoint treatment. */
+.omx-graph-stage .outcome-node,
+.omx-graph-stage .omx-outcome-node,
+.omx-graph-stage [data-node-type="outcome"] {
+  border-color: rgba(80, 227, 154, 0.42);
+}
+
+/* =========================================================================
+   15. ACTIVE / SELECTED GRAPH OBJECTS
+   ========================================================================= */
+
+.omx-graph-stage .selected,
+.omx-graph-stage [aria-selected="true"],
+.omx-graph-stage [data-selected="true"] {
+  outline: none;
+}
+
+.omx-graph-stage .react-flow__node.selected,
+.omx-graph-stage .graph-node.selected,
+.omx-graph-stage .omx-graph-node.selected,
+.omx-graph-stage .decision-node.selected,
+.omx-graph-stage .omx-decision-node.selected {
+  border-color: rgba(72, 217, 255, 0.62);
+  box-shadow:
+    0 0 0 1px rgba(72, 217, 255, 0.18),
+    0 0 28px rgba(72, 217, 255, 0.13),
+    0 16px 34px rgba(0, 0, 0, 0.46);
+}
+
+/* Selection ring for SVG/canvas-adjacent DOM markers. */
+.omx-graph-stage .selected::after,
+.omx-graph-stage [aria-selected="true"]::after,
+.omx-graph-stage [data-selected="true"]::after {
+  pointer-events: none;
+}
+
+/* =========================================================================
+   16. "LIVE GRAPH" MICRO-INDICATORS
+   ========================================================================= */
+
+.omx-graph-stage .live,
+.omx-graph-stage .live-indicator,
+.omx-graph-stage .omx-live {
+  position: relative;
+}
+
+.omx-graph-stage .live::before,
+.omx-graph-stage .live-indicator::before,
+.omx-graph-stage .omx-live::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--rv-green);
+  box-shadow: 0 0 9px rgba(80, 227, 154, 0.78);
+}
+
+/* =========================================================================
+   17. SCROLLBAR / FOCUS POLISH
+   ========================================================================= */
+
+.omx-graph-stage ::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.omx-graph-stage ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.omx-graph-stage ::-webkit-scrollbar-thumb {
+  background: rgba(150, 175, 205, 0.2);
+  border-radius: 999px;
+}
+
+.omx-graph-stage ::-webkit-scrollbar-thumb:hover {
+  background: rgba(72, 217, 255, 0.3);
+}
+
+.omx-graph-stage button:focus-visible,
+.omx-graph-stage input:focus-visible,
+.omx-graph-stage [tabindex]:focus-visible {
+  outline: 1px solid rgba(72, 217, 255, 0.72);
+  outline-offset: 2px;
+}
+
+/* =========================================================================
+   18. REDUCE-MOTION ACCESSIBILITY
+   ========================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .omx-graph-stage *,
+  .omx-graph-stage *::before,
+  .omx-graph-stage *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================================
+   19. SMALL-SCREEN GRAPH
+   ========================================================================= */
+
+@container omxgraph (max-width: 880px) {
+  .omx-graph-stage::before {
+    background-size: 26px 26px, 26px 26px, 130px 130px, 130px 130px;
+  }
+
+  .omx-graph-stage .decision-step,
+  .omx-graph-stage .omx-decision-step,
+  .omx-graph-stage .recovery-step,
+  .omx-graph-stage .omx-recovery-step {
+    border-radius: 10px;
+  }
+}
+
+@container omxgraph (max-width: 560px) {
+  .omx-graph-stage::before {
+    opacity: 0.48;
+  }
+
+  .omx-graph-stage::after {
+    width: 92vw;
+  }
+
+  .omx-graph-toolbar {
+    max-width: calc(100% - 20px);
+    right: 10px;
+  }
+}
+
+/* =========================================================================
+   20. IMPORTANT: DON'T BREAK THE REAL GRAPH
+   -------------------------------------------------------------------------
+   Decorative layers are pointer-transparent. Existing toolbar, filters,
+   legend, selection and fullscreen controls retain their z-index and event
+   behaviour from the original stylesheet above.
+   ========================================================================= */
