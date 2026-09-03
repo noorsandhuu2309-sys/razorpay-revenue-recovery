@@ -15,13 +15,8 @@
 // of them is why it now gets the whole window instead of 60% of it.
 
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
-import markUrl from './assets/omnix-mark.png'
-import { HomeView } from './views/Home'
-import { AskNovaView } from './views/Ask'
 import { ChallengeView } from './views/Challenge'
 import { HelixView } from './views/Helix'
-import { CompareView } from './views/Compare'
-import { GraphView } from './views/GraphView'
 // The World Map is the ONLY lazily-loaded view, and the reason is specific
 // rather than a general policy: MapLibre GL is ~1MB, more than double the rest
 // of the application put together. Bundling it eagerly makes every user who
@@ -29,11 +24,12 @@ import { GraphView } from './views/GraphView'
 // enough that splitting it would cost a request and save nothing.
 const MapView = lazy(() =>
   import('./views/MapView').then((m) => ({ default: m.MapView })))
-import { BriefView, ClaimsView, SourcesView, TableView, TimelineView } from './views/Views'
-import { OutputsView } from './views/Outputs'
-import { IntentsView } from './views/Intents'
-import { AgentsView } from './views/Agents'
-import { RecoveryView } from './views/Recovery'
+import {
+  AskRevoraPage, ModelQualityPage, PoliciesPage, RecoveryAgentsView,
+  RecoveryAnalyticsPage, RecoveryBriefView, RecoveryDashboardView,
+  RecoveryMonitorsView, RecoveryQueueView, RecoveryReportsView,
+  SelectedPage,
+} from './views/RevoraViews'
 import { AnalysisView, NewsView, RelationshipsView } from './views/TerraViews'
 import { AskView, IntelView, SituationView, TerraAgentsView } from './views/TerraIntel'
 import { SettingsView } from './views/Settings'
@@ -48,7 +44,7 @@ import { TrustLens } from './components/TrustLens'
 import { ActivityPanel } from './components/ActivityPanel'
 import { AppearanceMenu } from './components/AppearanceMenu'
 import {
-  IconActivity, IconChevron, IconInspector, IconPalette, IconSpace,
+  IconActivity, IconChevron, IconInspector, IconPalette,
 } from './components/Icons'
 import { hydrate as hydrateAppearance } from './lib/appearance'
 import { refresh as refreshAuth, useAuth } from './lib/auth'
@@ -85,7 +81,7 @@ function RailGroup({ label, collapsed, open, onToggle, children, count }: {
     return (
       <div className={`omx-rail-group ${open ? '' : 'closed'}`}>
         <button
-          className={`omx-group-grip ${open ? '' : 'closed'} ${label === 'TERRA' ? 'terra' : ''}`}
+          className={`omx-group-grip ${open ? '' : 'closed'}`}
           onClick={onToggle}
           aria-expanded={open}
           aria-label={`${label} — ${open ? 'hide' : 'show'} ${count} views`}
@@ -102,7 +98,7 @@ function RailGroup({ label, collapsed, open, onToggle, children, count }: {
   return (
     <div className="omx-rail-group">
       <button
-        className={`omx-group-head ${open ? '' : 'closed'} ${label === 'TERRA' ? 'terra' : ''}`}
+        className={`omx-group-head ${open ? '' : 'closed'}`}
         onClick={onToggle}
         aria-expanded={open}
       >
@@ -273,9 +269,6 @@ function Shell() {
   const setView = useWorkspace((s) => s.setView)
   const workspaces = useWorkspace((s) => s.workspaces)
   const workspaceId = useWorkspace((s) => s.workspaceId)
-  const setWorkspace = useWorkspace((s) => s.setWorkspace)
-  const summary = useWorkspace((s) => s.summary)
-  const summaries = useWorkspace((s) => s.summaries)
   const inspectorOpen = useWorkspace((s) => s.inspectorOpen)
   const setInspector = useWorkspace((s) => s.setInspector)
   const setPalette = useWorkspace((s) => s.setPalette)
@@ -338,16 +331,15 @@ function Shell() {
               light and a dark copy. mask-image is set inline because Vite
               hashes the asset URL at build time. */}
           <span
-            className="mark"
+            className="mark revora-mark"
             role="img"
-            aria-label="OMNIX"
-            style={{ maskImage: `url(${markUrl})`, WebkitMaskImage: `url(${markUrl})` }}
+            aria-label="Revora"
           />
           {!railCollapsed && (
             <>
               <div className="bwrap">
-                <div className="bt">OMNIX</div>
-                <div className="bs">Intelligence Workspace</div>
+                <div className="bt">REVORA</div>
+                <div className="bs">AI Revenue Recovery</div>
               </div>
               <button
                 className="omx-rail-collapse"
@@ -373,74 +365,6 @@ function Shell() {
             reach — which is what both states did, collapsed by 363px and
             expanded by 15 — has no fixed landmarks at all. */}
         <div className="omx-rail-scroll">
-        <div className="omx-rail-group">
-          {VIEWS_MAIN.map((v) => (
-            <RailItem key={v.id} view={v} active={view === v.id}
-                      collapsed={railCollapsed} onGo={() => setView(v.id)} />
-          ))}
-        </div>
-
-        <RailGroup
-          label="Spaces"
-          collapsed={railCollapsed}
-          open={groupsOpen.Spaces ?? true}
-          onToggle={() => toggleGroup('Spaces')}
-          count={workspaces.length}
-        >
-          {/* "Spaces", not "Workspaces": the blueprint's word, and the better
-              one — a Space is somewhere you return to, a workspace is a mode.
-
-              Each row states what the Space HOLDS. Without that, switching
-              between three Spaces on this machine — one with 652 objects, one
-              with 48, one with none — looked like clicking dead tabs: the app
-              was reloading everything correctly and had no way to say so.
-              A count that changes is the proof the switch did something, and
-              "empty" said up front is why an empty Space no longer reads as a
-              broken one. */}
-          {workspaces.map((w) => {
-            const s = summaries[w.id]
-            return (
-              <button
-                key={w.id}
-                className={`omx-rail-item space ${w.id === workspaceId ? 'on' : ''}`}
-                // Lands on Graph, whose entire content is a function of the
-                // Space. Staying put would leave you on Home or the World Map,
-                // neither of which is Space-scoped — which is exactly how a
-                // working switch came to look like a no-op.
-                onClick={() => { void setWorkspace(w.id); setView('graph') }}
-                title={railCollapsed ? undefined : (w.description || w.name)}
-                aria-label={railCollapsed ? w.name : undefined}
-                aria-current={w.id === workspaceId ? 'true' : undefined}
-                data-tip={w.name}
-                data-hint={s === undefined ? 'Loading…'
-                  : s.objects === 0 ? 'Empty Space'
-                    : `${s.objects} objects · ${s.sources} sources`}
-              >
-                {/* Collapsed, every Space drew the same hexagon: three
-                    identical tiles in a column, and the only way to tell them
-                    apart was to hover each one. A monogram makes the choice
-                    visible without a tooltip, which is the whole job of an
-                    icon-only rail. */}
-                <span className="ic">
-                  {railCollapsed
-                    ? <span className="mono">{spaceMonogram(w.name)}</span>
-                    : <IconSpace size={16} />}
-                </span>
-                {!railCollapsed && (
-                  <span className="bd">
-                    <span className="tx">{w.name}</span>
-                    <span className="ct">
-                      {s === undefined ? '…'
-                        : s.objects === 0 ? 'empty'
-                          : `${s.objects} objects · ${s.sources} sources`}
-                    </span>
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </RailGroup>
-
         {GROUP_ORDER.map((group) => (
           <RailGroup
             key={group}
@@ -457,24 +381,6 @@ function Shell() {
           </RailGroup>
         ))}
 
-        {summary && !railCollapsed && (
-          <div className="omx-rail-group stats">
-            <div className="omx-label">This Space</div>
-            <div className="omx-rail-stats">
-              {([
-                ['objects', summary.objects],
-                ['links', summary.relationships],
-                ['claims', summary.claims],
-                ['sources', summary.sources],
-                ['tracked', summary.tracked],
-              ] as const).map(([k, v]) => (
-                <div className="st" key={k}>
-                  <span className="n">{v}</span><span className="l">{k}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         </div>
 
         {/* Pinned to the bottom. Everything above is work; this is the account
@@ -561,24 +467,27 @@ function Shell() {
             used to unmount the entire workspace; now it is contained and the
             shell stays navigable. Keyed on `view` so navigating clears it. */}
         <ViewBoundary resetKey={view}>
-        {view === 'home' && <HomeView />}
-        {view === 'nova' && <AskNovaView />}
-        {view === 'compare' && <CompareView />}
-        {view === 'graph' && <GraphView />}
+        {view === 'home' && <RecoveryDashboardView />}
+        {view === 'nova' && <AskRevoraPage />}
+        {view === 'compare' && <RecoveryAnalyticsPage />}
+        {view === 'graph' && <SelectedPage kind="graph" />}
         {view === 'map' && (
-          <Suspense fallback={<div className="omx-gx-boot">Loading the map…</div>}>
+          <Suspense fallback={<div className="omx-gx-boot">Loading…</div>}>
             <MapView />
           </Suspense>
         )}
-        {view === 'timeline' && <TimelineView />}
-        {view === 'table' && <TableView />}
-        {view === 'brief' && <BriefView />}
-        {view === 'claims' && <ClaimsView />}
-        {view === 'sources' && <SourcesView />}
-        {view === 'outputs' && <OutputsView />}
-        {view === 'intents' && <IntentsView />}
-        {view === 'agents' && <AgentsView />}
-        {view === 'recovery' && <RecoveryView />}
+        {view === 'timeline' && <SelectedPage kind="timeline" />}
+        {view === 'table' && <RecoveryQueueView />}
+        {view === 'brief' && <RecoveryBriefView />}
+        {view === 'claims' && <SelectedPage kind="evidence" />}
+        {view === 'sources' && <SelectedPage kind="context" />}
+        {view === 'outputs' && <RecoveryReportsView />}
+        {view === 'intents' && <RecoveryMonitorsView />}
+        {view === 'agents' && <RecoveryAgentsView />}
+        {view === 'recovery' && <RecoveryDashboardView />}
+        {view === 'audit' && <SelectedPage kind="audit" />}
+        {view === 'policies' && <PoliciesPage />}
+        {view === 'model-quality' && <ModelQualityPage />}
         {view === 'news' && <NewsView />}
         {view === 'relationships' && <RelationshipsView />}
         {view === 'analysis' && <AnalysisView />}
@@ -606,17 +515,4 @@ function Shell() {
   )
 }
 
-const VIEWS_MAIN = viewsInGroup('main')
 const VIEWS_FOOT = viewsInGroup('foot')
-
-/** One or two characters standing in for a Space name on the collapsed rail.
- *
- *  Two initials where the name is several words ("Geopolitical Intelligence" →
- *  GI), one letter otherwise — a two-letter stub of a single word reads as an
- *  abbreviation of something and is worse than the initial alone. */
-function spaceMonogram(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return '·'
-  if (words.length === 1) return words[0][0].toUpperCase()
-  return (words[0][0] + words[1][0]).toUpperCase()
-}

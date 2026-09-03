@@ -232,7 +232,7 @@ export const useWorkspace = create<WorkspaceState>()(
     // own, and the Space's counts sit on the empty state so the "what is going
     // on" answer is still one line above the box. The map is one click away and
     // first in TERRA, which is where a world view belongs.
-    view: 'home',
+    view: 'recovery',
     graph: null,
     graphLoading: false,
     typeFilter: [],

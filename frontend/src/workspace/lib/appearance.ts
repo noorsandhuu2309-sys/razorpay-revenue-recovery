@@ -30,14 +30,14 @@ export interface AccentDef {
  *  letting workspace.css's ramp blocks do the work, so this list cannot drift
  *  out of sync with the palette. */
 export const ACCENTS: readonly AccentDef[] = [
-  { id: 'gold', label: 'Gold', hint: 'The house colour — TERRA gold' },
-  { id: 'red', label: 'Red', hint: 'Vermilion' },
+  { id: 'gold', label: 'Gold', hint: 'Warm gold accent' },
+  { id: 'red', label: 'Coral', hint: 'Revora coral — recommended' },
   { id: 'blue', label: 'Blue', hint: 'Azure' },
   { id: 'green', label: 'Green', hint: 'Emerald' },
   { id: 'mono', label: 'Mono', hint: 'White on black, black on white' },
 ] as const
 
-export const DEFAULT_ACCENT: AccentId = 'gold'
+export const DEFAULT_ACCENT: AccentId = 'red'
 export const DEFAULT_MODE: Mode = 'dark'
 
 // `omx-theme` predates the accent axis and already holds people's dark/light

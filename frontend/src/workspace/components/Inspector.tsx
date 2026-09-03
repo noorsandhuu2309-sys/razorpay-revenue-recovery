@@ -14,6 +14,7 @@ import { describeEdge } from '../lib/graphModel'
 import { RelationshipInspector } from './RelationshipInspector'
 import { CountryDossier } from '../views/TerraIntel'
 import type { OmxEvent, OmxObject, OmxRelationship, OmxSource } from '../lib/types'
+import { money, selectedRecoveryCase, useRecoveryData } from '../lib/recovery'
 
 function Provenance({ p, label }: { p: string; label: string }) {
   const explain: Record<string, string> = {
@@ -38,6 +39,17 @@ function Provenance({ p, label }: { p: string; label: string }) {
  *  select — Map, Table, the command palette — gets the same behaviour without
  *  knowing anything about it. */
 export function Inspector() {
+  const view = useWorkspace((s) => s.view)
+  const recoveryCase = useRecoveryData(selectedRecoveryCase)
+  const setView = useWorkspace((s) => s.setView)
+  const recoveryViews = new Set(['table', 'claims', 'sources', 'graph', 'timeline', 'audit'])
+  /* Legacy inline recovery panel moved below generic hooks. Keeping this
+     implementation in a comment makes the hook order explicit while the
+     compact RecoveryCasePanel owns the active render path.
+    if (!recoveryCase) return <div className="omx-inspector"><div className="omx-section"><h4>Recovery Case</h4><p className="omx-empty-line">Select a recovery case in Recovery Queue.</p></div></div>
+    return <div className="omx-inspector"><div className="omx-section"><div className="omx-label">Recovery case</div><h3 style={{ margin: '7px 0' }}>{recoveryCase.transaction_id}</h3><p className="omx-empty-line">{money(recoveryCase.amount)} · {recoveryCase.merchant_id}</p><div className="omx-rev-rules"><span className={`omx-rev-badge ${recoveryCase.status === 'Recovered' ? 'ok' : 'warn'}`}>{recoveryCase.status}</span></div></div><div className="omx-section"><h4>Failure</h4><div className="omx-kv"><span className="k">Type</span><span className="v">{recoveryCase.failure_type} · {recoveryCase.failure_code}</span></div><div className="omx-kv"><span className="k">AI recommendation</span><span className="v">{recoveryCase.recommended_action}</span></div><div className="omx-kv"><span className="k">Confidence</span><span className="v">{Math.round(recoveryCase.evidence_confidence * 100)}%</span></div><div className="omx-kv"><span className="k">Evidence</span><span className="v">{recoveryCase.evidence_verdict}</span></div><div className="omx-kv"><span className="k">Policy</span><span className="v">{recoveryCase.allowed ? 'Authorized' : 'Manual review'}</span></div><div className="omx-kv"><span className="k">Execution</span><span className="v">{recoveryCase.attempted ? recoveryCase.execution_message : 'Not executed'}</span></div><div className="omx-kv"><span className="k">Recovered</span><span className="v">{money(recoveryCase.amount_recovered)}</span></div></div><div className="omx-section"><div style={{ display: 'grid', gap: 7 }}><button className="omx-btn" onClick={() => setView('audit')}>View audit</button><button className="omx-btn primary" onClick={() => setView('nova')}>Ask Revora about this case</button></div></div></div>
+  }
+  */
   const activeEdge = useGraphUi((s) => s.activeEdge)
   const graph = useWorkspace((s) => s.graph)
   const ontology = useWorkspace((s) => s.ontology)
@@ -67,6 +79,10 @@ export function Inspector() {
     return { meta, from, to }
   }, [activeEdge, graph, symmetricRelations])
 
+  if (recoveryViews.has(view)) {
+    return <RecoveryCasePanel recoveryCase={recoveryCase} onView={setView} />
+  }
+
   if (edgeCtx) {
     return (
       <RelationshipInspector
@@ -75,6 +91,23 @@ export function Inspector() {
     )
   }
   return <ObjectInspector />
+}
+
+function RecoveryCasePanel({ recoveryCase, onView }: {
+  recoveryCase: ReturnType<typeof selectedRecoveryCase>
+  onView: (view: 'audit' | 'nova') => void
+}) {
+  if (!recoveryCase) return <div className="omx-inspector"><div className="omx-section"><h4>Recovery Case</h4><p className="omx-empty-line">Select a recovery case from Recovery Queue.</p></div></div>
+  const rows: [string, string][] = [
+    ['Failure', `${recoveryCase.failure_type} · ${recoveryCase.failure_code}`],
+    ['AI recommendation', recoveryCase.recommended_action],
+    ['Confidence', `${Math.round(recoveryCase.evidence_confidence * 100)}%`],
+    ['Evidence', recoveryCase.evidence_verdict],
+    ['Policy', recoveryCase.allowed ? 'Authorized' : 'Manual review'],
+    ['Execution', recoveryCase.attempted ? recoveryCase.execution_message : 'Not executed'],
+    ['Recovered', money(recoveryCase.amount_recovered)],
+  ]
+  return <div className="omx-inspector"><div className="omx-section"><div className="omx-label">Recovery case</div><h3 style={{ margin: '7px 0' }}>{recoveryCase.transaction_id}</h3><p className="omx-empty-line">{money(recoveryCase.amount)} · {recoveryCase.merchant_id}</p><span className={`omx-rev-badge ${recoveryCase.status === 'Recovered' ? 'ok' : 'warn'}`}>{recoveryCase.status}</span></div><div className="omx-section">{rows.map(([label, value]) => <div className="omx-kv" key={label}><span className="k">{label}</span><span className="v">{value}</span></div>)}</div><div className="omx-section"><div style={{ display: 'grid', gap: 7 }}><button className="omx-btn" onClick={() => onView('audit')}>View audit</button><button className="omx-btn primary" onClick={() => onView('nova')}>Ask Revora about this case</button></div></div></div>
 }
 
 function ObjectInspector() {

@@ -262,9 +262,9 @@ export function RecoveryView() {
   const [benchmark, setBenchmark] = useState<RecoveryBenchmark | null>(null)
   const [auditTrail, setAuditTrail] = useState<RecoveryAuditRecord[]>([])
 const [aiResult, setAiResult] = useState<RecoveryAIResult | null>(null)
-const [loading, setLoading] = useState(true)
+const [loading] = useState(true)
 const [, setAiLoading] = useState(false)
-const [error, setError] = useState<string | null>(null)
+const [error] = useState<string | null>(null)
 const aiRequestRef = useRef<Promise<RecoveryAIResult> | null>(null)
 
 
@@ -1292,7 +1292,7 @@ const display = {
                 {
                   title: 'STOP — retry exhausted',
                   detail:
-                    'If the transaction has reached its retry limit, OMNIX stops retrying and routes the case to manual review.',
+                    'If the transaction has reached its retry limit, Revora stops retrying and routes the case to manual review.',
                 },
               ].map((rule) => (
                 <div

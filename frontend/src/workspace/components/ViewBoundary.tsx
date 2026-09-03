@@ -51,17 +51,16 @@ export class ViewBoundary extends Component<Props, State> {
 
     return (
       <div className="omx-view-error" role="alert">
-        <h3>This view hit an error</h3>
+        <h3>Something went wrong</h3>
         <p>
           The rest of the workspace is fine — switch to another view, or try
           this one again.
         </p>
-        <pre>{error.message}</pre>
         <button
           className="omx-btn"
           onClick={() => this.setState({ error: null })}
         >
-          Try again
+          Retry
         </button>
       </div>
     )

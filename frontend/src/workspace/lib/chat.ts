@@ -245,6 +245,19 @@ function truncateFrom(id: string): string | null {
 // ---------------------------------------------------------------------------
 let controller: AbortController | null = null
 
+/**
+ * Product-scoped context for the existing chat transport. The current backend
+ * builds its own system prompt and accepts user/assistant history, so this is
+ * prefixed to the outbound user turn rather than adding an unsupported system
+ * history entry. It stays in memory so a refreshed benchmark cannot leave old
+ * numbers embedded in a saved conversation.
+ */
+let analystContext = ''
+
+export function setAnalystContext(context: string): void {
+  analystContext = context.trim()
+}
+
 export function stop() {
   controller?.abort()
   controller = null
@@ -334,13 +347,18 @@ async function stream(image?: string): Promise<void> {
 
   controller = new AbortController()
   try {
+    const messages = conv.messages.map((m) => ({ role: m.role, content: m.text }))
+    const last = messages[messages.length - 1]
+    if (analystContext && last?.role === 'user') {
+      last.content = `${analystContext}\n\nUser question: ${last.content}`
+    }
     const res = await fetch('/api/chat', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       signal: controller.signal,
       body: JSON.stringify({
-        messages: conv.messages.map((m) => ({ role: m.role, content: m.text })),
+        messages,
         forced_agent: conv.agent === 'auto' ? null : conv.agent,
         // Auto is the ABSENCE of an override, not a value the server has to
         // know about — same contract as `forced_agent` above.
